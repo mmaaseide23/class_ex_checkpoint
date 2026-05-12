@@ -13,8 +13,11 @@ public class PropertyDAO {
 
     private static final String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
 
+    private static final String DB_USER = "postgres";
+    private static final String DB_PASS = "postgres";
+
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL);
+        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
     }
 
     private Property mapRow(ResultSet rs) throws SQLException {

@@ -26,6 +26,8 @@ public class Main {
         "/Users/michaelmaaseide/Documents/Courses/CS4530/REServer/data/nsw_property_data.csv";
 
     static final private String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
+    static final private String DB_USER = "postgres";
+    static final private String DB_PASS = "postgres";
 
     private static final String INSERT_SQL =
         "INSERT INTO properties (property_id, download_date, council_name, purchase_price, " +
@@ -41,7 +43,7 @@ public class Main {
 
         try (
             CSVParser parser = CSVParser.parse(csvFilePath, StandardCharsets.UTF_8, CSV_FORMAT);
-            Connection conn = DriverManager.getConnection(DB_URL);
+            Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
             PreparedStatement stmt = conn.prepareStatement(INSERT_SQL)
         ) {
             conn.setAutoCommit(false);
