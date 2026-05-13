@@ -22,12 +22,14 @@ public class Main {
         .setAllowDuplicateHeaderNames(false)
         .build();
 
-    static final private String PATH_TO_FILE =
-        "/Users/michaelmaaseide/Documents/Courses/CS4530/REServer/data/nsw_property_data.csv";
+    static final private String DB_URL = env("DB_URL", "jdbc:postgresql://localhost:5432/realestate");
+    static final private String DB_USER = env("DB_USER", "postgres");
+    static final private String DB_PASS = env("DB_PASS", "postgres");
 
-    static final private String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
-    static final private String DB_USER = "postgres";
-    static final private String DB_PASS = "postgres";
+    private static String env(String key, String fallback) {
+        String val = System.getenv(key);
+        return (val != null && !val.isEmpty()) ? val : fallback;
+    }
 
     private static final String INSERT_SQL =
         "INSERT INTO properties (property_id, download_date, council_name, purchase_price, " +
@@ -37,9 +39,15 @@ public class Main {
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     public static void main(String[] args) {
+        if (args.length < 1) {
+            System.out.println("Usage: java -jar REDataLoader.jar <path-to-csv>");
+            System.out.println("  Example: java -jar REDataLoader.jar data/nsw_property_data.csv");
+            return;
+        }
+
         System.out.println("Starting data load...");
 
-        final Path csvFilePath = Paths.get(PATH_TO_FILE);
+        final Path csvFilePath = Paths.get(args[0]);
 
         try (
             CSVParser parser = CSVParser.parse(csvFilePath, StandardCharsets.UTF_8, CSV_FORMAT);

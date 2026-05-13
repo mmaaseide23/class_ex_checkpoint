@@ -1,7 +1,8 @@
 package propertyListing;
 
+import app.DatabaseConfig;
+
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,10 +11,8 @@ import java.util.List;
 
 public class PropertyListingDAO {
 
-    private static final String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
-
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL);
+        return DatabaseConfig.getConnection();
     }
 
     private PropertyListing mapRow(ResultSet rs) throws SQLException {

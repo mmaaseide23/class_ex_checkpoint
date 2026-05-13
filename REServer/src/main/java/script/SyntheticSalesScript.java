@@ -4,6 +4,8 @@ import property.Property;
 import propertyListing.PropertyListing;
 import propertyListing.PropertyListingDAO;
 
+import app.DatabaseConfig;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -11,12 +13,10 @@ import java.util.List;
 
 public class SyntheticSalesScript {
 
-  private static final String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
-
   public static void main(String[] args) throws SQLException {
 
     // Drop and recreate to guarantee a clean 1000
-    try (Connection conn = DriverManager.getConnection(DB_URL);
+    try (Connection conn = DatabaseConfig.getConnection();
          Statement stmt = conn.createStatement()) {
       stmt.execute("DROP TABLE IF EXISTS property_listings");
       stmt.execute(
@@ -75,7 +75,7 @@ public class SyntheticSalesScript {
                     "ORDER BY RANDOM() LIMIT 1100";
     List<Property> results = new ArrayList<>();
 
-    try (Connection conn = DriverManager.getConnection(DB_URL);
+    try (Connection conn = DatabaseConfig.getConnection();
          PreparedStatement stmt = conn.prepareStatement(sql);
          ResultSet rs = stmt.executeQuery()) {
 

@@ -2,6 +2,8 @@ package app;
 import io.javalin.Javalin;
 import property.PropertyDAO;
 import property.PropertyController;
+import propertyListing.PropertyListingDAO;
+import propertyListing.PropertyListingController;
 import user.UserDAO;
 import user.UserController;
 
@@ -17,6 +19,9 @@ public class REServer {
 
             var properties = new PropertyDAO();
             PropertyController propertyHandler = new PropertyController(properties);
+
+            var listingDAO = new PropertyListingDAO();
+            PropertyListingController listingHandler = new PropertyListingController(listingDAO);
 
             var userDAO = new UserDAO();
             UserController userHandler = new UserController(userDAO);
@@ -37,6 +42,17 @@ public class REServer {
             });
             app.get("/property/postcode/{postcode}", ctx -> {
                 propertyHandler.findPropertyByPostCode(ctx, ctx.pathParam("postcode"));
+            });
+
+            // Listing endpoints
+            app.post("/listing", ctx -> {
+                listingHandler.createListing(ctx);
+            });
+            app.get("/listing", ctx -> {
+                listingHandler.getAllListings(ctx);
+            });
+            app.get("/listing/{propertyID}", ctx -> {
+                listingHandler.getListingsByProperty(ctx, ctx.pathParam("propertyID"));
             });
 
             // User endpoints

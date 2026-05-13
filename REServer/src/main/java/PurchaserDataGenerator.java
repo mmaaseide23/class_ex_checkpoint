@@ -1,12 +1,10 @@
+import app.DatabaseConfig;
+
 import java.sql.*;
 import java.util.*;
 import java.util.UUID;
 
 public class PurchaserDataGenerator {
-
-  private static final String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
-  private static final String DB_USER = "postgres";
-  private static final String DB_PASS = "postgres";
 
   private static final String CREATE_PURCHASER_TABLE =
           "CREATE TABLE IF NOT EXISTS purchasers (" +
@@ -73,7 +71,7 @@ public class PurchaserDataGenerator {
   public static void main(String[] args) {
     Random random = new Random();
 
-    try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS)) {
+    try (Connection conn = DatabaseConfig.getConnection()) {
       conn.setAutoCommit(false);
 
       System.out.println("Creating tables if they don't exist...");

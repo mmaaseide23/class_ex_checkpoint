@@ -1,7 +1,8 @@
 package property;
 
+import app.DatabaseConfig;
+
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,13 +12,8 @@ import java.util.Optional;
 
 public class PropertyDAO {
 
-    private static final String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
-
-    private static final String DB_USER = "postgres";
-    private static final String DB_PASS = "postgres";
-
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+        return DatabaseConfig.getConnection();
     }
 
     private Property mapRow(ResultSet rs) throws SQLException {
