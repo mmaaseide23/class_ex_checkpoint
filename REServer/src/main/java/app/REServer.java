@@ -1,8 +1,9 @@
 package app;
 import io.javalin.Javalin;
-import io.javalin.config.JavalinConfig;
 import property.PropertyDAO;
 import property.PropertyController;
+import user.UserDAO;
+import user.UserController;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,42 +15,47 @@ public class REServer {
 
         public static void main(String[] args) {
 
-            // in memory test data store
             var properties = new PropertyDAO();
-
-            // API implementation
             PropertyController propertyHandler = new PropertyController(properties);
 
-            // start Javalin on port 7070
+            var userDAO = new UserDAO();
+            UserController userHandler = new UserController(userDAO);
+
             var app = Javalin.create()
                     .get("/", ctx -> ctx.result("Real Estate server is running"))
                     .start(7070);
 
-            // configure endpoint handlers to process HTTP requests
-            JavalinConfig config = new JavalinConfig();
-            config.router.apiBuilder(() -> {
-                // Property records are immutable hence no PUT and DELETE
-
-                // return a property by property ID
-                app.get("/property/{propertyID}", ctx -> {
-                    propertyHandler.getPropertyByID(ctx, ctx.pathParam("propertyID"));
-                });
-                // get all property records - could be big!
-                app.get("/property", ctx -> {
-                    propertyHandler.getAllProperties(ctx);
-                });
-                // create a new property record
-                app.post("/property", ctx -> {
-                    propertyHandler.createProperty(ctx);
-                });
-                // Get all properties for a specified postcode
-                app.get("/property/postcode/{postcode}", ctx -> {
-                    propertyHandler.findPropertyByPostCode(ctx, ctx.pathParam("postcode"));
-                });
+            // Property endpoints
+            app.get("/property/{propertyID}", ctx -> {
+                propertyHandler.getPropertyByID(ctx, ctx.pathParam("propertyID"));
+            });
+            app.get("/property", ctx -> {
+                propertyHandler.getAllProperties(ctx);
+            });
+            app.post("/property", ctx -> {
+                propertyHandler.createProperty(ctx);
+            });
+            app.get("/property/postcode/{postcode}", ctx -> {
+                propertyHandler.findPropertyByPostCode(ctx, ctx.pathParam("postcode"));
             });
 
+            // User endpoints
+            app.post("/user", ctx -> {
+                userHandler.register(ctx);
+            });
+            app.get("/user/{id}", ctx -> {
+                userHandler.getUser(ctx, ctx.pathParam("id"));
+            });
 
+            // User preference endpoints
+            app.post("/user/{id}/preference", ctx -> {
+                userHandler.addPreference(ctx, ctx.pathParam("id"));
+            });
+            app.get("/user/{id}/preference", ctx -> {
+                userHandler.getPreferences(ctx, ctx.pathParam("id"));
+            });
+            app.delete("/preference/{id}", ctx -> {
+                userHandler.deletePreference(ctx, ctx.pathParam("id"));
+            });
         }
 }
-
-
