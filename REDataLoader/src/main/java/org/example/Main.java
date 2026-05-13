@@ -23,8 +23,7 @@ public class Main {
         .build();
 
     static final private String PATH_TO_FILE =
-        "/Users/michaelmaaseide/Documents/Courses/CS4530/REServer/data/nsw_property_data.csv";
-
+        "/Users/reecedigiacomo/Documents/CS4350/ClassExCheckpoint/nsw_property_data.csv";
     static final private String DB_URL = "jdbc:postgresql://localhost:5432/realestate";
     static final private String DB_USER = "postgres";
     static final private String DB_PASS = "postgres";
