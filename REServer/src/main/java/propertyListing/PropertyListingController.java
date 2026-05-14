@@ -2,6 +2,7 @@ package propertyListing;
 
 import app.HtmlUtil;
 import io.javalin.http.Context;
+import io.javalin.openapi.*;
 
 import java.util.List;
 
@@ -13,6 +14,18 @@ public class PropertyListingController {
         this.listings = listings;
     }
 
+    @OpenApi(
+        path = "/listing",
+        methods = HttpMethod.POST,
+        summary = "Create a new property listing",
+        operationId = "createListing",
+        tags = {"Listing"},
+        requestBody = @OpenApiRequestBody(content = @OpenApiContent(from = PropertyListing.class)),
+        responses = {
+            @OpenApiResponse(status = "201", description = "Listing created"),
+            @OpenApiResponse(status = "400", description = "Failed to add listing")
+        }
+    )
     public void createListing(Context ctx) {
         PropertyListing listing = ctx.bodyValidator(PropertyListing.class).get();
 
@@ -23,6 +36,17 @@ public class PropertyListingController {
         }
     }
 
+    @OpenApi(
+        path = "/listing",
+        methods = HttpMethod.GET,
+        summary = "Get all listings (max 100)",
+        operationId = "getAllListings",
+        tags = {"Listing"},
+        responses = {
+            @OpenApiResponse(status = "200", description = "Listings returned as HTML table"),
+            @OpenApiResponse(status = "404", description = "No listings found")
+        }
+    )
     public void getAllListings(Context ctx) {
         List<PropertyListing> all = listings.getAllListings();
         if (all.isEmpty()) {
@@ -32,6 +56,18 @@ public class PropertyListingController {
         }
     }
 
+    @OpenApi(
+        path = "/listing/{propertyID}",
+        methods = HttpMethod.GET,
+        summary = "Get listing history for a property",
+        operationId = "getListingsByProperty",
+        tags = {"Listing"},
+        pathParams = @OpenApiParam(name = "propertyID", type = String.class, description = "The property ID"),
+        responses = {
+            @OpenApiResponse(status = "200", description = "Listing history returned as HTML table"),
+            @OpenApiResponse(status = "404", description = "No listings found for property")
+        }
+    )
     public void getListingsByProperty(Context ctx, String propertyId) {
         List<PropertyListing> history = listings.getListingsByPropertyId(propertyId);
         if (history.isEmpty()) {

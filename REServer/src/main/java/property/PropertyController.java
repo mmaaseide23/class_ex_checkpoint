@@ -2,6 +2,7 @@ package property;
 
 import app.HtmlUtil;
 import io.javalin.http.Context;
+import io.javalin.openapi.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,18 @@ public class PropertyController {
         this.properties = properties;
     }
 
+    @OpenApi(
+        path = "/property",
+        methods = HttpMethod.POST,
+        summary = "Create a new property",
+        operationId = "createProperty",
+        tags = {"Property"},
+        requestBody = @OpenApiRequestBody(content = @OpenApiContent(from = Property.class)),
+        responses = {
+            @OpenApiResponse(status = "201", description = "Property created"),
+            @OpenApiResponse(status = "400", description = "Failed to add property")
+        }
+    )
     public void createProperty(Context ctx) {
         Property property = ctx.bodyValidator(Property.class).get();
 
@@ -24,6 +37,21 @@ public class PropertyController {
         }
     }
 
+    @OpenApi(
+        path = "/property",
+        methods = HttpMethod.GET,
+        summary = "Get all properties, optionally filtered by price range",
+        operationId = "getAllProperties",
+        tags = {"Property"},
+        queryParams = {
+            @OpenApiParam(name = "minPrice", type = Long.class, description = "Minimum purchase price"),
+            @OpenApiParam(name = "maxPrice", type = Long.class, description = "Maximum purchase price")
+        },
+        responses = {
+            @OpenApiResponse(status = "200", description = "Properties returned as HTML table"),
+            @OpenApiResponse(status = "404", description = "No properties found")
+        }
+    )
     public void getAllProperties(Context ctx) {
         String minParam = ctx.queryParam("minPrice");
         String maxParam = ctx.queryParam("maxPrice");
@@ -44,6 +72,18 @@ public class PropertyController {
         }
     }
 
+    @OpenApi(
+        path = "/property/{propertyID}",
+        methods = HttpMethod.GET,
+        summary = "Get a property by its property ID",
+        operationId = "getPropertyByID",
+        tags = {"Property"},
+        pathParams = @OpenApiParam(name = "propertyID", type = String.class, description = "The property ID"),
+        responses = {
+            @OpenApiResponse(status = "200", description = "Property returned as HTML table"),
+            @OpenApiResponse(status = "404", description = "Property not found")
+        }
+    )
     public void getPropertyByID(Context ctx, String id) {
         Optional<Property> property = properties.getPropertyById(id);
         if (property.isPresent()) {
@@ -53,6 +93,18 @@ public class PropertyController {
         }
     }
 
+    @OpenApi(
+        path = "/property/postcode/{postcode}",
+        methods = HttpMethod.GET,
+        summary = "Find properties by postcode",
+        operationId = "findPropertyByPostCode",
+        tags = {"Property"},
+        pathParams = @OpenApiParam(name = "postcode", type = String.class, description = "The postcode to search"),
+        responses = {
+            @OpenApiResponse(status = "200", description = "Properties returned as HTML table"),
+            @OpenApiResponse(status = "404", description = "No properties found for postcode")
+        }
+    )
     public void findPropertyByPostCode(Context ctx, String postCode) {
         List<Property> result = properties.getPropertiesByPostCode(postCode);
         if (result.isEmpty()) {

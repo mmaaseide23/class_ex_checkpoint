@@ -1,6 +1,8 @@
 package app;
 
 import io.javalin.Javalin;
+import io.javalin.openapi.plugin.OpenApiPlugin;
+import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
 import property.PropertyDAO;
 import property.PropertyController;
 import propertyListing.PropertyListingDAO;
@@ -20,9 +22,20 @@ public class REServer {
         var userDAO = new UserDAO();
         var userHandler = new UserController(userDAO);
 
-        var app = Javalin.create()
-                .get("/", ctx -> ctx.result("Real Estate server is running"))
-                .start(7070);
+        var app = Javalin.create(config -> {
+            config.registerPlugin(new OpenApiPlugin(openApiConfig -> {
+                openApiConfig.withDefinitionConfiguration((version, definition) -> {
+                    definition.withInfo(info -> {
+                        info.setTitle("Real Estate API");
+                        info.setVersion("1.0.0");
+                        info.setDescription("NSW Real Estate listing and notification service");
+                    });
+                });
+            }));
+            config.registerPlugin(new SwaggerPlugin());
+        })
+        .get("/", ctx -> ctx.result("Real Estate server is running"))
+        .start(7070);
 
         app.get("/property/{propertyID}", ctx -> {
             propertyHandler.getPropertyByID(ctx, ctx.pathParam("propertyID"));
