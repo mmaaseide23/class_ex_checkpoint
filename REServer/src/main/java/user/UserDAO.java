@@ -7,7 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class UserDAO {
@@ -117,6 +119,45 @@ public class UserDAO {
             e.printStackTrace();
             return 0;
         }
+    }
+
+    public List<UserNotification> getNotificationsForAllUsers() {
+        String sql =
+            "SELECT u.id, u.first_name, u.last_name, u.email, " +
+            "       pl.property_id, pl.price " +
+            "FROM users u " +
+            "JOIN user_preferences up " +
+            "  ON up.user_id = u.id AND up.preference_type = 'postcode' " +
+            "JOIN properties p " +
+            "  ON p.post_code = up.preference_value " +
+            "JOIN property_listings pl " +
+            "  ON pl.property_id = p.property_id " +
+            "ORDER BY u.id, pl.property_id";
+
+        Map<Integer, UserNotification> byUser = new LinkedHashMap<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                int uid = rs.getInt("id");
+                UserNotification n = byUser.get(uid);
+                if (n == null) {
+                    n = new UserNotification();
+                    n.userId = uid;
+                    n.firstName = rs.getString("first_name");
+                    n.lastName = rs.getString("last_name");
+                    n.email = rs.getString("email");
+                    byUser.put(uid, n);
+                }
+                UserNotification.MatchingListing ml = new UserNotification.MatchingListing();
+                ml.propertyId = rs.getLong("property_id");
+                ml.price = rs.getLong("price");
+                n.listings.add(ml);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>(byUser.values());
     }
 
     private User mapUser(ResultSet rs) throws SQLException {

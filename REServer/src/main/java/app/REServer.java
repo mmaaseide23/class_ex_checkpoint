@@ -56,6 +56,9 @@ public class REServer {
             });
 
             // User endpoints
+            app.get("/user/notify", ctx -> {
+                userHandler.notify(ctx);
+            });
             app.post("/user", ctx -> {
                 userHandler.register(ctx);
             });
