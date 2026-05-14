@@ -8,11 +8,14 @@ import java.util.Optional;
 public class UserController {
 
     private static final int MAX_POSTCODE_PREFERENCES = 5;
+    private static final int HTML_LISTING_THRESHOLD = 1000;
 
     private final UserDAO users;
+    private final NotificationService notifications;
 
     public UserController(UserDAO users) {
         this.users = users;
+        this.notifications = new NotificationService(users);
     }
 
     public void register(Context ctx) {
@@ -90,6 +93,59 @@ public class UserController {
         } else {
             ctx.status(404).json("Preference not found");
         }
+    }
+
+    public void notify(Context ctx) {
+        List<UserNotification> toNotify = notifications.collectNotifications();
+
+        int totalListings = 0;
+        for (UserNotification n : toNotify) {
+            totalListings += n.listings.size();
+        }
+
+        if (totalListings > HTML_LISTING_THRESHOLD) {
+            ctx.contentType("text/plain").result(renderPlainText(toNotify));
+        } else {
+            ctx.html(renderHtml(toNotify));
+        }
+    }
+
+    private String renderHtml(List<UserNotification> toNotify) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html><head><meta charset=\"utf-8\">")
+          .append("<title>Purchaser Notifications</title></head><body>")
+          .append("<h1>Purchaser Notifications</h1>");
+        if (toNotify.isEmpty()) {
+            sb.append("<p>No matching listings for any user.</p>");
+        }
+        for (UserNotification n : toNotify) {
+            sb.append("<h2>").append(escape(n.firstName)).append(' ').append(escape(n.lastName)).append("</h2>");
+            sb.append("<ul>");
+            for (UserNotification.MatchingListing ml : n.listings) {
+                sb.append("<li>Property ").append(ml.propertyId)
+                  .append(" — $").append(ml.price).append("</li>");
+            }
+            sb.append("</ul>");
+        }
+        sb.append("</body></html>");
+        return sb.toString();
+    }
+
+    private String renderPlainText(List<UserNotification> toNotify) {
+        StringBuilder sb = new StringBuilder();
+        for (UserNotification n : toNotify) {
+            sb.append(n.firstName).append(' ').append(n.lastName).append('\n');
+            for (UserNotification.MatchingListing ml : n.listings) {
+                sb.append("  property=").append(ml.propertyId)
+                  .append(" price=").append(ml.price).append('\n');
+            }
+        }
+        return sb.toString();
+    }
+
+    private String escape(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
 }
