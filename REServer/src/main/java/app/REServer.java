@@ -73,5 +73,6 @@ public class REServer {
             app.delete("/preference/{id}", ctx -> {
                 userHandler.deletePreference(ctx, ctx.pathParam("id"));
             });
+
         }
 }

@@ -10,7 +10,7 @@ FROM (
 ORDER BY RANDOM()
 LIMIT 1000;
 
--- Synthetic Purchasers: 10,000 accounts with random names
+-- Synthetic Users: 10,000 accounts with random names and postcode interests
 DO $$
 DECLARE
     first_names TEXT[] := ARRAY[
@@ -45,7 +45,7 @@ DECLARE
     ];
     fname TEXT;
     lname TEXT;
-    purchaser_id_val INT;
+    user_id_val INT;
     num_interests INT;
     postcodes TEXT[];
     pc TEXT;
@@ -59,7 +59,7 @@ BEGIN
     WHERE post_code IS NOT NULL;
 
     IF postcodes IS NULL OR array_length(postcodes, 1) IS NULL THEN
-        RAISE NOTICE 'No postcodes found — skipping purchaser generation.';
+        RAISE NOTICE 'No postcodes found — skipping user generation.';
         RETURN;
     END IF;
 
@@ -67,16 +67,16 @@ BEGIN
         fname := first_names[1 + floor(random() * array_length(first_names, 1))::int];
         lname := last_names[1 + floor(random() * array_length(last_names, 1))::int];
 
-        INSERT INTO purchasers (first_name, last_name, email, phone)
+        INSERT INTO users (first_name, last_name, email, phone)
         VALUES (
             fname,
             lname,
             lower(fname) || '.' || lower(lname) || '.' || substr(gen_random_uuid()::text, 1, 8) || '@example.com',
             '04' || lpad(floor(random() * 100000000)::text, 8, '0')
         )
-        RETURNING purchasers.purchaser_id INTO purchaser_id_val;
+        RETURNING id INTO user_id_val;
 
-        -- 0 to 5 random postcode interests
+        -- 0 to 5 random postcode preferences
         num_interests := floor(random() * 6)::int;
         selected := ARRAY[]::TEXT[];
 
@@ -85,9 +85,8 @@ BEGIN
             pc := postcodes[idx];
             IF NOT pc = ANY(selected) THEN
                 selected := array_append(selected, pc);
-                INSERT INTO purchaser_interests (purchaser_id, post_code)
-                VALUES (purchaser_id_val, pc)
-                ON CONFLICT DO NOTHING;
+                INSERT INTO user_preferences (user_id, preference_type, preference_value)
+                VALUES (user_id_val, 'postcode', pc);
             END IF;
         END LOOP;
     END LOOP;

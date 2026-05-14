@@ -17,14 +17,17 @@ public class UserDAO {
     }
 
     public User createUser(User user) {
-        String sql = "INSERT INTO users (name, email) VALUES (?, ?) RETURNING id";
+        String sql = "INSERT INTO users (first_name, last_name, email, phone) VALUES (?, ?, ?, ?) RETURNING id, created_date";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, user.name);
-            stmt.setString(2, user.email);
+            stmt.setString(1, user.firstName);
+            stmt.setString(2, user.lastName);
+            stmt.setString(3, user.email);
+            stmt.setString(4, user.phone);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 user.id = rs.getInt("id");
+                user.createdDate = rs.getDate("created_date").toLocalDate();
             }
             return user;
         } catch (SQLException e) {
@@ -40,11 +43,7 @@ public class UserDAO {
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                User u = new User();
-                u.id = rs.getInt("id");
-                u.name = rs.getString("name");
-                u.email = rs.getString("email");
-                return Optional.of(u);
+                return Optional.of(mapUser(rs));
             }
             return Optional.empty();
         } catch (SQLException e) {
@@ -118,5 +117,18 @@ public class UserDAO {
             e.printStackTrace();
             return 0;
         }
+    }
+
+    private User mapUser(ResultSet rs) throws SQLException {
+        User u = new User();
+        u.id = rs.getInt("id");
+        u.firstName = rs.getString("first_name");
+        u.lastName = rs.getString("last_name");
+        u.email = rs.getString("email");
+        u.phone = rs.getString("phone");
+        if (rs.getDate("created_date") != null) {
+            u.createdDate = rs.getDate("created_date").toLocalDate();
+        }
+        return u;
     }
 }

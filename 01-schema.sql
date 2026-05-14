@@ -34,9 +34,12 @@ CREATE TABLE IF NOT EXISTS property_listings (
 CREATE INDEX IF NOT EXISTS idx_property_listings_property_id ON property_listings (property_id);
 
 CREATE TABLE IF NOT EXISTS users (
-    id    SERIAL PRIMARY KEY,
-    name  VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE
+    id           SERIAL PRIMARY KEY,
+    first_name   VARCHAR(100) NOT NULL,
+    last_name    VARCHAR(100) NOT NULL,
+    email        VARCHAR(255) NOT NULL UNIQUE,
+    phone        VARCHAR(20),
+    created_date DATE DEFAULT CURRENT_DATE
 );
 
 CREATE TABLE IF NOT EXISTS user_preferences (
@@ -48,21 +51,3 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 
 CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences (user_id);
 
-CREATE TABLE IF NOT EXISTS purchasers (
-    purchaser_id SERIAL PRIMARY KEY,
-    first_name   VARCHAR(100),
-    last_name    VARCHAR(100),
-    email        VARCHAR(255) UNIQUE,
-    phone        VARCHAR(20),
-    created_date DATE DEFAULT CURRENT_DATE
-);
-
-CREATE TABLE IF NOT EXISTS purchaser_interests (
-    interest_id  SERIAL PRIMARY KEY,
-    purchaser_id INTEGER REFERENCES purchasers(purchaser_id) ON DELETE CASCADE,
-    post_code    VARCHAR(10),
-    UNIQUE(purchaser_id, post_code)
-);
-
-CREATE INDEX IF NOT EXISTS idx_purchaser_interests_purchaser_id ON purchaser_interests (purchaser_id);
-CREATE INDEX IF NOT EXISTS idx_purchaser_interests_post_code ON purchaser_interests (post_code);

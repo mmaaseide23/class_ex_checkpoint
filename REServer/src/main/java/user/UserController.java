@@ -18,8 +18,12 @@ public class UserController {
     public void register(Context ctx) {
         User user = ctx.bodyValidator(User.class).get();
 
-        if (user.name == null || user.name.isBlank()) {
-            ctx.status(400).json("Name is required");
+        if (user.firstName == null || user.firstName.isBlank()) {
+            ctx.status(400).json("First name is required");
+            return;
+        }
+        if (user.lastName == null || user.lastName.isBlank()) {
+            ctx.status(400).json("Last name is required");
             return;
         }
         if (user.email == null || user.email.isBlank()) {
@@ -87,4 +91,5 @@ public class UserController {
             ctx.status(404).json("Preference not found");
         }
     }
+
 }
