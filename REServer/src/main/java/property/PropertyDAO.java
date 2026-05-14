@@ -1,6 +1,6 @@
 package property;
 
-import app.DatabaseConfig;
+import app.BaseDAO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -10,28 +10,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class PropertyDAO {
-
-    private Connection getConnection() throws SQLException {
-        return DatabaseConfig.getConnection();
-    }
+public class PropertyDAO extends BaseDAO {
 
     private Property mapRow(ResultSet rs) throws SQLException {
         Property p = new Property();
         p.id = rs.getInt("id");
-        p.propertyID = rs.getString("property_id");
-        p.downloadDate = rs.getString("download_date");
+        p.propertyId = rs.getLong("property_id");
+        p.downloadDate = rs.getDate("download_date") != null ? rs.getDate("download_date").toLocalDate() : null;
         p.councilName = rs.getString("council_name");
-        p.purchasePrice = rs.getString("purchase_price");
+        p.purchasePrice = rs.getLong("purchase_price");
         p.address = rs.getString("address");
-        p.postcode = rs.getString("post_code");
+        p.postCode = rs.getString("post_code");
         p.propertyType = rs.getString("property_type");
         p.strataLotNumber = rs.getString("strata_lot_number");
         p.propertyName = rs.getString("property_name");
         p.area = rs.getDouble("area");
         p.areaType = rs.getString("area_type");
-        p.contractDate = rs.getString("contract_date");
-        p.settlementDate = rs.getString("settlement_date");
+        p.contractDate = rs.getDate("contract_date") != null ? rs.getDate("contract_date").toLocalDate() : null;
+        p.settlementDate = rs.getDate("settlement_date") != null ? rs.getDate("settlement_date").toLocalDate() : null;
         p.zoning = rs.getString("zoning");
         p.natureOfProperty = rs.getString("nature_of_property");
         p.primaryPurpose = rs.getString("primary_purpose");
@@ -43,9 +39,9 @@ public class PropertyDAO {
         String sql = "INSERT INTO properties (property_id, post_code, purchase_price) VALUES (?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, Long.parseLong(property.propertyID));
-            stmt.setString(2, property.postcode);
-            stmt.setLong(3, Long.parseLong(property.purchasePrice));
+            stmt.setLong(1, property.propertyId);
+            stmt.setString(2, property.postCode);
+            stmt.setLong(3, property.purchasePrice);
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -54,11 +50,11 @@ public class PropertyDAO {
         }
     }
 
-    public Optional<Property> getPropertyById(String propertyID) {
+    public Optional<Property> getPropertyById(String propertyId) {
         String sql = "SELECT * FROM properties WHERE property_id = ? LIMIT 1";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, Long.parseLong(propertyID));
+            stmt.setLong(1, Long.parseLong(propertyId));
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 return Optional.of(mapRow(rs));
@@ -116,20 +112,5 @@ public class PropertyDAO {
             e.printStackTrace();
         }
         return results;
-    }
-
-    public List<String> getAllPropertyPrices() {
-        String sql = "SELECT purchase_price FROM properties LIMIT 100";
-        List<String> prices = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                prices.add(String.valueOf(rs.getLong("purchase_price")));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return prices;
     }
 }

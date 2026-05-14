@@ -1,6 +1,6 @@
 package user;
 
-import app.DatabaseConfig;
+import app.BaseDAO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -10,11 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class UserDAO {
-
-    private Connection getConnection() throws SQLException {
-        return DatabaseConfig.getConnection();
-    }
+public class UserDAO extends BaseDAO {
 
     public User createUser(User user) {
         String sql = "INSERT INTO users (first_name, last_name, email, phone) VALUES (?, ?, ?, ?) RETURNING id, created_date";
@@ -79,12 +75,7 @@ public class UserDAO {
             stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                UserPreference p = new UserPreference();
-                p.id = rs.getInt("id");
-                p.userId = rs.getInt("user_id");
-                p.preferenceType = rs.getString("preference_type");
-                p.preferenceValue = rs.getString("preference_value");
-                results.add(p);
+                results.add(mapPreference(rs));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -117,6 +108,15 @@ public class UserDAO {
             e.printStackTrace();
             return 0;
         }
+    }
+
+    private UserPreference mapPreference(ResultSet rs) throws SQLException {
+        UserPreference p = new UserPreference();
+        p.id = rs.getInt("id");
+        p.userId = rs.getInt("user_id");
+        p.preferenceType = rs.getString("preference_type");
+        p.preferenceValue = rs.getString("preference_value");
+        return p;
     }
 
     private User mapUser(ResultSet rs) throws SQLException {

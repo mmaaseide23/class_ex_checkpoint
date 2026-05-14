@@ -1,5 +1,6 @@
 package property;
 
+import app.HtmlUtil;
 import io.javalin.http.Context;
 
 import java.util.List;
@@ -13,27 +14,16 @@ public class PropertyController {
         this.properties = properties;
     }
 
-    // implements POST /property
     public void createProperty(Context ctx) {
+        Property property = ctx.bodyValidator(Property.class).get();
 
-        // Extract Property from request body
-        // TO DO override Validator exception method to report better error message
-        Property property = ctx.bodyValidator(Property.class)
-                                .get();
-
-        // store new property in data set
         if (properties.newProperty(property)) {
-            ctx.result("Property Created");
-            ctx.status(201);
+            ctx.status(201).result("Property Created");
         } else {
-            ctx.result("Failed to add property");
-            ctx.status(400);
+            ctx.status(400).result("Failed to add property");
         }
     }
 
-    // implements GET /property
-    // Optional query params: minPrice, maxPrice
-    // Example: GET http://localhost:7070/property?minPrice=1000000&maxPrice=3000000
     public void getAllProperties(Context ctx) {
         String minParam = ctx.queryParam("minPrice");
         String maxParam = ctx.queryParam("maxPrice");
@@ -48,51 +38,42 @@ public class PropertyController {
         }
 
         if (allProperties.isEmpty()) {
-            ctx.html(errorHtml("No Properties Found"));
-            ctx.status(404);
+            ctx.status(404).html(HtmlUtil.errorPage("No Properties Found"));
         } else {
-            ctx.html(propertyListHtml("All Properties", allProperties));
-            ctx.status(200);
+            ctx.status(200).html(propertyTableHtml("All Properties", allProperties));
         }
     }
 
-    // implements GET /property/{propertyID}
     public void getPropertyByID(Context ctx, String id) {
         Optional<Property> property = properties.getPropertyById(id);
         if (property.isPresent()) {
-            ctx.html(propertyListHtml("Property " + id, List.of(property.get())));
-            ctx.status(200);
+            ctx.status(200).html(propertyTableHtml("Property " + id, List.of(property.get())));
         } else {
-            ctx.html(errorHtml("Property not found"));
-            ctx.status(404);
+            ctx.status(404).html(HtmlUtil.errorPage("Property not found"));
         }
     }
 
-    // implements GET /property/postcode/{postcodeID}
     public void findPropertyByPostCode(Context ctx, String postCode) {
         List<Property> result = properties.getPropertiesByPostCode(postCode);
         if (result.isEmpty()) {
-            ctx.html(errorHtml("No properties for postcode found"));
-            ctx.status(404);
+            ctx.status(404).html(HtmlUtil.errorPage("No properties for postcode found"));
         } else {
-            ctx.html(propertyListHtml("Properties in Postcode " + postCode, result));
-            ctx.status(200);
+            ctx.status(200).html(propertyTableHtml("Properties in Postcode " + postCode, result));
         }
     }
 
-    private String propertyListHtml(String title, List<Property> props) {
+    private String propertyTableHtml(String title, List<Property> props) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<!DOCTYPE html><html><head><title>").append(title).append("</title></head><body>");
-        sb.append("<h1>").append(title).append("</h1>");
+        sb.append(HtmlUtil.pageHeader(title));
         sb.append("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\">");
         sb.append("<tr><th>ID</th><th>Council</th><th>Price</th><th>Address</th><th>Postcode</th><th>Type</th><th>Area</th><th>Contract Date</th><th>Zoning</th><th>Purpose</th></tr>");
         for (Property p : props) {
             sb.append("<tr>")
-              .append("<td>").append(p.propertyID).append("</td>")
+              .append("<td>").append(p.propertyId).append("</td>")
               .append("<td>").append(p.councilName).append("</td>")
               .append("<td>").append(p.purchasePrice).append("</td>")
               .append("<td>").append(p.address).append("</td>")
-              .append("<td>").append(p.postcode).append("</td>")
+              .append("<td>").append(p.postCode).append("</td>")
               .append("<td>").append(p.propertyType).append("</td>")
               .append("<td>").append(p.area).append("</td>")
               .append("<td>").append(p.contractDate).append("</td>")
@@ -100,12 +81,8 @@ public class PropertyController {
               .append("<td>").append(p.primaryPurpose).append("</td>")
               .append("</tr>");
         }
-        sb.append("</table></body></html>");
+        sb.append("</table>");
+        sb.append(HtmlUtil.pageFooter());
         return sb.toString();
-    }
-
-    private String errorHtml(String message) {
-        return "<!DOCTYPE html><html><head><title>Error</title></head><body>"
-             + "<h1>Error</h1><p>" + message + "</p></body></html>";
     }
 }

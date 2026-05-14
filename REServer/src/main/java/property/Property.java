@@ -1,20 +1,22 @@
 package property;
 
+import java.time.LocalDate;
+
 public class Property {
     public int id;
-    public String propertyID;
-    public String downloadDate;
+    public long propertyId;
+    public LocalDate downloadDate;
     public String councilName;
-    public String purchasePrice;
+    public long purchasePrice;
     public String address;
-    public String postcode;
+    public String postCode;
     public String propertyType;
     public String strataLotNumber;
     public String propertyName;
     public double area;
     public String areaType;
-    public String contractDate;
-    public String settlementDate;
+    public LocalDate contractDate;
+    public LocalDate settlementDate;
     public String zoning;
     public String natureOfProperty;
     public String primaryPurpose;
