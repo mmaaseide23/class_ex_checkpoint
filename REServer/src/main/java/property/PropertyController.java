@@ -1,5 +1,6 @@
 package property;
 
+import analytics.AccessCountDAO;
 import app.HtmlUtil;
 import io.javalin.http.Context;
 import io.javalin.openapi.*;
@@ -10,9 +11,11 @@ import java.util.Optional;
 public class PropertyController {
 
     private final PropertyDAO properties;
+    private final AccessCountDAO accessCounts;
 
-    public PropertyController(PropertyDAO properties) {
+    public PropertyController(PropertyDAO properties, AccessCountDAO accessCounts) {
         this.properties = properties;
+        this.accessCounts = accessCounts;
     }
 
     @OpenApi(
@@ -87,6 +90,7 @@ public class PropertyController {
     public void getPropertyByID(Context ctx, String id) {
         Optional<Property> property = properties.getPropertyById(id);
         if (property.isPresent()) {
+            accessCounts.increment("property", id);
             ctx.status(200).html(propertyTableHtml("Property " + id, List.of(property.get())));
         } else {
             ctx.status(404).html(HtmlUtil.errorPage("Property not found"));
@@ -110,6 +114,7 @@ public class PropertyController {
         if (result.isEmpty()) {
             ctx.status(404).html(HtmlUtil.errorPage("No properties for postcode found"));
         } else {
+            accessCounts.increment("postcode", postCode);
             ctx.status(200).html(propertyTableHtml("Properties in Postcode " + postCode, result));
         }
     }

@@ -1,5 +1,7 @@
 package app;
 
+import analytics.AccessCountDAO;
+import analytics.AnalyticsController;
 import io.javalin.Javalin;
 import io.javalin.openapi.plugin.OpenApiPlugin;
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
@@ -13,14 +15,18 @@ import user.UserController;
 public class REServer {
 
     public static void main(String[] args) {
+        var accessCountDAO = new AccessCountDAO();
+
         var propertyDAO = new PropertyDAO();
-        var propertyHandler = new PropertyController(propertyDAO);
+        var propertyHandler = new PropertyController(propertyDAO, accessCountDAO);
 
         var listingDAO = new PropertyListingDAO();
         var listingHandler = new PropertyListingController(listingDAO);
 
         var userDAO = new UserDAO();
         var userHandler = new UserController(userDAO);
+
+        var analyticsHandler = new AnalyticsController(accessCountDAO);
 
         var app = Javalin.create(config -> {
             config.registerPlugin(new OpenApiPlugin(openApiConfig -> {
@@ -77,6 +83,16 @@ public class REServer {
         });
         app.delete("/user/{userId}/preference/{id}", ctx -> {
             userHandler.deletePreference(ctx, ctx.pathParam("id"));
+        });
+
+        app.get("/analytics", ctx -> {
+            analyticsHandler.getAll(ctx);
+        });
+        app.get("/analytics/top/property", ctx -> {
+            analyticsHandler.getTopProperties(ctx);
+        });
+        app.get("/analytics/top/postcode", ctx -> {
+            analyticsHandler.getTopPostcodes(ctx);
         });
     }
 }

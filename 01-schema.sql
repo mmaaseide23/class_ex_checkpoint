@@ -51,3 +51,14 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 
 CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences (user_id);
 
+CREATE TABLE IF NOT EXISTS access_counts (
+    id           SERIAL PRIMARY KEY,
+    access_type  VARCHAR(20) NOT NULL,
+    access_value VARCHAR(255) NOT NULL,
+    count        INTEGER NOT NULL DEFAULT 0,
+    last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_access UNIQUE (access_type, access_value)
+);
+
+CREATE INDEX IF NOT EXISTS idx_access_counts_type_value ON access_counts (access_type, access_value);
+

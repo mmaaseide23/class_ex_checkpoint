@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="warning"/>
+
+    <!-- Line length at Checker level -->
+    <module name="LineLength">
+        <property name="max" value="180"/>
+    </module>
+
+    <module name="FileTabCharacter"/>
+
+    <module name="TreeWalker">
+        <!-- Naming conventions -->
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="MethodName"/>
+        <module name="TypeName"/>
+
+        <!-- Imports -->
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+
+        <!-- Whitespace -->
+        <module name="NoWhitespaceBefore"/>
+
+        <!-- Blocks -->
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+        <module name="NeedBraces"/>
+
+        <!-- Coding -->
+        <module name="EmptyStatement"/>
+        <module name="EqualsHashCode"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="OneStatementPerLine"/>
+
+        <!-- Design -->
+        <module name="OneTopLevelClass"/>
+
+        <!-- Misc -->
+        <module name="ArrayTypeStyle"/>
+        <module name="UpperEll"/>
+    </module>
+</module>
