@@ -1,4 +1,4 @@
-package propertyListing;
+package listing;
 
 import app.BaseDAO;
 
@@ -9,18 +9,18 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PropertyListingDAO extends BaseDAO {
+public class ListingDAO extends BaseDAO {
 
-    private PropertyListing mapRow(ResultSet rs) throws SQLException {
-        PropertyListing pl = new PropertyListing();
-        pl.id = rs.getInt("id");
-        pl.propertyId = rs.getLong("property_id");
-        pl.listingDate = rs.getDate("listing_date").toLocalDate();
-        pl.price = rs.getLong("price");
-        return pl;
+    private Listing mapRow(ResultSet rs) throws SQLException {
+        Listing l = new Listing();
+        l.id = rs.getInt("id");
+        l.propertyId = rs.getLong("property_id");
+        l.listingDate = rs.getDate("listing_date").toLocalDate();
+        l.price = rs.getLong("price");
+        return l;
     }
 
-    public boolean newListing(PropertyListing listing) {
+    public boolean newListing(Listing listing) {
         String sql = "INSERT INTO listings (property_id, listing_date, price) VALUES (?, ?, ?) ON CONFLICT (property_id, listing_date, price) DO NOTHING";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -35,9 +35,9 @@ public class PropertyListingDAO extends BaseDAO {
         }
     }
 
-    public List<PropertyListing> getListingsByPropertyId(String propertyId) {
+    public List<Listing> getListingsByPropertyId(String propertyId) {
         String sql = "SELECT * FROM listings WHERE property_id = ? ORDER BY listing_date";
-        List<PropertyListing> results = new ArrayList<>();
+        List<Listing> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, Long.parseLong(propertyId));
@@ -51,9 +51,9 @@ public class PropertyListingDAO extends BaseDAO {
         return results;
     }
 
-    public List<PropertyListing> getAllListings() {
+    public List<Listing> getAllListings() {
         String sql = "SELECT * FROM listings LIMIT 100";
-        List<PropertyListing> results = new ArrayList<>();
+        List<Listing> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             ResultSet rs = stmt.executeQuery();

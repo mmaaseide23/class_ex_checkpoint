@@ -1,8 +1,8 @@
 package script;
 
-import property.Property;
-import propertyListing.PropertyListing;
-import propertyListing.PropertyListingDAO;
+import listing.Listing;
+import listing.ListingDAO;
+import sale.Sale;
 
 import app.DatabaseConfig;
 
@@ -20,25 +20,25 @@ public class SyntheticSalesScript {
             System.out.println("Cleared existing listings");
         }
 
-        List<Property> randomProperties = getRandom1000Properties();
-        System.out.println("Fetched " + randomProperties.size() + " properties");
+        List<Sale> randomSales = getRandom1000Sales();
+        System.out.println("Fetched " + randomSales.size() + " sales");
 
-        PropertyListingDAO listingDAO = new PropertyListingDAO();
+        ListingDAO listingDAO = new ListingDAO();
         LocalDate today = LocalDate.now();
         int success = 0;
         int skipped = 0;
 
-        for (Property p : randomProperties) {
+        for (Sale s : randomSales) {
             if (success >= 1000) break;
-            if (p.purchasePrice <= 0) {
+            if (s.purchasePrice <= 0) {
                 skipped++;
                 continue;
             }
 
-            PropertyListing listing = new PropertyListing();
-            listing.propertyId = p.propertyId;
+            Listing listing = new Listing();
+            listing.propertyId = s.propertyId;
             listing.listingDate = today;
-            listing.price = Math.round(p.purchasePrice * 1.20);
+            listing.price = Math.round(s.purchasePrice * 1.20);
 
             if (listingDAO.newListing(listing)) success++;
             else skipped++;
@@ -47,7 +47,7 @@ public class SyntheticSalesScript {
         System.out.println("Done! Created: " + success + " | Skipped/duplicate: " + skipped);
     }
 
-    private static List<Property> getRandom1000Properties() throws SQLException {
+    private static List<Sale> getRandom1000Sales() throws SQLException {
         String sql =
             "SELECT DISTINCT ON (property_id) id, property_id, purchase_price, address" +
             " FROM sales" +
@@ -55,17 +55,17 @@ public class SyntheticSalesScript {
             " ORDER BY property_id, settlement_date DESC NULLS LAST";
         String wrapped = "SELECT * FROM (" + sql + ") latest ORDER BY RANDOM() LIMIT 1100";
 
-        List<Property> results = new ArrayList<>();
+        List<Sale> results = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement stmt = conn.prepareStatement(wrapped);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                Property p = new Property();
-                p.id = rs.getInt("id");
-                p.propertyId = rs.getLong("property_id");
-                p.purchasePrice = rs.getLong("purchase_price");
-                p.address = rs.getString("address");
-                results.add(p);
+                Sale s = new Sale();
+                s.id = rs.getInt("id");
+                s.propertyId = rs.getLong("property_id");
+                s.purchasePrice = rs.getLong("purchase_price");
+                s.address = rs.getString("address");
+                results.add(s);
             }
         }
         return results;

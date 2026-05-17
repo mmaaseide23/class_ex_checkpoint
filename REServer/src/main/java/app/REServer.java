@@ -5,10 +5,10 @@ import analytics.AnalyticsController;
 import io.javalin.Javalin;
 import io.javalin.openapi.plugin.OpenApiPlugin;
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
-import property.PropertyDAO;
-import property.PropertyController;
-import propertyListing.PropertyListingDAO;
-import propertyListing.PropertyListingController;
+import listing.ListingDAO;
+import listing.ListingController;
+import sale.SaleDAO;
+import sale.SaleController;
 import user.UserDAO;
 import user.UserController;
 
@@ -17,11 +17,11 @@ public class REServer {
     public static void main(String[] args) {
         var accessCountDAO = new AccessCountDAO();
 
-        var propertyDAO = new PropertyDAO();
-        var propertyHandler = new PropertyController(propertyDAO, accessCountDAO);
+        var saleDAO = new SaleDAO();
+        var saleHandler = new SaleController(saleDAO, accessCountDAO);
 
-        var listingDAO = new PropertyListingDAO();
-        var listingHandler = new PropertyListingController(listingDAO, accessCountDAO);
+        var listingDAO = new ListingDAO();
+        var listingHandler = new ListingController(listingDAO, accessCountDAO);
 
         var userDAO = new UserDAO();
         var userHandler = new UserController(userDAO);
@@ -43,17 +43,17 @@ public class REServer {
         .get("/", ctx -> ctx.result("Real Estate server is running"))
         .start(7070);
 
-        app.get("/property/{propertyID}", ctx -> {
-            propertyHandler.getPropertyByID(ctx, ctx.pathParam("propertyID"));
+        app.get("/sale/{propertyID}", ctx -> {
+            saleHandler.getSaleByPropertyID(ctx, ctx.pathParam("propertyID"));
         });
-        app.get("/property", ctx -> {
-            propertyHandler.getAllProperties(ctx);
+        app.get("/sale", ctx -> {
+            saleHandler.getAllSales(ctx);
         });
-        app.post("/property", ctx -> {
-            propertyHandler.createProperty(ctx);
+        app.post("/sale", ctx -> {
+            saleHandler.createSale(ctx);
         });
-        app.get("/property/postcode/{postcode}", ctx -> {
-            propertyHandler.findPropertyByPostCode(ctx, ctx.pathParam("postcode"));
+        app.get("/sale/postcode/{postcode}", ctx -> {
+            saleHandler.findSalesByPostCode(ctx, ctx.pathParam("postcode"));
         });
 
         app.post("/listing", ctx -> {

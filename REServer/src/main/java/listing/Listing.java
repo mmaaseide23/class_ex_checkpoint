@@ -1,12 +1,12 @@
-package propertyListing;
+package listing;
 
 import java.time.LocalDate;
 
-public class PropertyListing {
+public class Listing {
     public int id;
     public long propertyId;
     public LocalDate listingDate;
     public long price;
 
-    public PropertyListing() {}
+    public Listing() {}
 }

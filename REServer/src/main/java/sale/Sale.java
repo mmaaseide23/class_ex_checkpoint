@@ -1,8 +1,8 @@
-package property;
+package sale;
 
 import java.time.LocalDate;
 
-public class Property {
+public class Sale {
     public int id;
     public long propertyId;
     public LocalDate downloadDate;
@@ -22,5 +22,5 @@ public class Property {
     public String primaryPurpose;
     public String legalDescription;
 
-    public Property() {}
+    public Sale() {}
 }

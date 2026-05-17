@@ -1,4 +1,4 @@
-package propertyListing;
+package listing;
 
 import analytics.AccessCountDAO;
 import app.HtmlUtil;
@@ -7,12 +7,12 @@ import io.javalin.openapi.*;
 
 import java.util.List;
 
-public class PropertyListingController {
+public class ListingController {
 
-    private final PropertyListingDAO listings;
+    private final ListingDAO listings;
     private final AccessCountDAO accessCounts;
 
-    public PropertyListingController(PropertyListingDAO listings, AccessCountDAO accessCounts) {
+    public ListingController(ListingDAO listings, AccessCountDAO accessCounts) {
         this.listings = listings;
         this.accessCounts = accessCounts;
     }
@@ -20,17 +20,17 @@ public class PropertyListingController {
     @OpenApi(
         path = "/listing",
         methods = HttpMethod.POST,
-        summary = "Create a new property listing",
+        summary = "Create a new listing",
         operationId = "createListing",
         tags = {"Listing"},
-        requestBody = @OpenApiRequestBody(content = @OpenApiContent(from = PropertyListing.class)),
+        requestBody = @OpenApiRequestBody(content = @OpenApiContent(from = Listing.class)),
         responses = {
             @OpenApiResponse(status = "201", description = "Listing created"),
             @OpenApiResponse(status = "400", description = "Failed to add listing")
         }
     )
     public void createListing(Context ctx) {
-        PropertyListing listing = ctx.bodyValidator(PropertyListing.class).get();
+        Listing listing = ctx.bodyValidator(Listing.class).get();
 
         if (listings.newListing(listing)) {
             ctx.status(201).result("Listing Created");
@@ -51,7 +51,7 @@ public class PropertyListingController {
         }
     )
     public void getAllListings(Context ctx) {
-        List<PropertyListing> all = listings.getAllListings();
+        List<Listing> all = listings.getAllListings();
         if (all.isEmpty()) {
             ctx.status(404).html(HtmlUtil.errorPage("No Listings Found"));
         } else {
@@ -72,7 +72,7 @@ public class PropertyListingController {
         }
     )
     public void getListingsByProperty(Context ctx, String propertyId) {
-        List<PropertyListing> history = listings.getListingsByPropertyId(propertyId);
+        List<Listing> history = listings.getListingsByPropertyId(propertyId);
         if (history.isEmpty()) {
             ctx.status(404).html(HtmlUtil.errorPage("No listings for property " + propertyId));
         } else {
@@ -81,17 +81,17 @@ public class PropertyListingController {
         }
     }
 
-    private String listingTableHtml(String title, List<PropertyListing> rows) {
+    private String listingTableHtml(String title, List<Listing> rows) {
         StringBuilder sb = new StringBuilder();
         sb.append(HtmlUtil.pageHeader(title));
         sb.append("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\">");
         sb.append("<tr><th>ID</th><th>Property ID</th><th>Listing Date</th><th>Price</th></tr>");
-        for (PropertyListing pl : rows) {
+        for (Listing l : rows) {
             sb.append("<tr>")
-              .append("<td>").append(pl.id).append("</td>")
-              .append("<td>").append(pl.propertyId).append("</td>")
-              .append("<td>").append(pl.listingDate).append("</td>")
-              .append("<td>").append(pl.price).append("</td>")
+              .append("<td>").append(l.id).append("</td>")
+              .append("<td>").append(l.propertyId).append("</td>")
+              .append("<td>").append(l.listingDate).append("</td>")
+              .append("<td>").append(l.price).append("</td>")
               .append("</tr>");
         }
         sb.append("</table>");
