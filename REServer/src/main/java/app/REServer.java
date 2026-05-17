@@ -21,7 +21,7 @@ public class REServer {
         var propertyHandler = new PropertyController(propertyDAO, accessCountDAO);
 
         var listingDAO = new PropertyListingDAO();
-        var listingHandler = new PropertyListingController(listingDAO);
+        var listingHandler = new PropertyListingController(listingDAO, accessCountDAO);
 
         var userDAO = new UserDAO();
         var userHandler = new UserController(userDAO);

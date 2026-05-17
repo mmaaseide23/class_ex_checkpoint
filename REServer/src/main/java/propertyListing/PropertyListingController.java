@@ -1,5 +1,6 @@
 package propertyListing;
 
+import analytics.AccessCountDAO;
 import app.HtmlUtil;
 import io.javalin.http.Context;
 import io.javalin.openapi.*;
@@ -9,9 +10,11 @@ import java.util.List;
 public class PropertyListingController {
 
     private final PropertyListingDAO listings;
+    private final AccessCountDAO accessCounts;
 
-    public PropertyListingController(PropertyListingDAO listings) {
+    public PropertyListingController(PropertyListingDAO listings, AccessCountDAO accessCounts) {
         this.listings = listings;
+        this.accessCounts = accessCounts;
     }
 
     @OpenApi(
@@ -73,6 +76,7 @@ public class PropertyListingController {
         if (history.isEmpty()) {
             ctx.status(404).html(HtmlUtil.errorPage("No listings for property " + propertyId));
         } else {
+            accessCounts.increment("property", propertyId);
             ctx.status(200).html(listingTableHtml("Listing History for Property " + propertyId, history));
         }
     }

@@ -1,9 +1,9 @@
--- Synthetic Property Listings: 1000 random properties listed at 20% above last sale price
-INSERT INTO property_listings (property_id, listing_date, price)
+-- Synthetic Listings: 1000 random properties listed at 20% above last sale price
+INSERT INTO listings (property_id, listing_date, price)
 SELECT property_id, CURRENT_DATE, ROUND(purchase_price * 1.20)
 FROM (
     SELECT DISTINCT ON (property_id) property_id, purchase_price
-    FROM properties
+    FROM sales
     WHERE purchase_price IS NOT NULL AND purchase_price > 0
     ORDER BY property_id, settlement_date DESC NULLS LAST
 ) latest
@@ -55,7 +55,7 @@ BEGIN
     -- Collect distinct postcodes from properties
     SELECT ARRAY_AGG(DISTINCT post_code)
     INTO postcodes
-    FROM properties
+    FROM sales
     WHERE post_code IS NOT NULL;
 
     IF postcodes IS NULL OR array_length(postcodes, 1) IS NULL THEN

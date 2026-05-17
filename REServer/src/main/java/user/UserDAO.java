@@ -119,9 +119,9 @@ public class UserDAO extends BaseDAO {
             "FROM users u " +
             "JOIN user_preferences up " +
             "  ON up.user_id = u.id AND up.preference_type = 'postcode' " +
-            "JOIN properties p " +
+            "JOIN sales p " +
             "  ON p.post_code = up.preference_value " +
-            "JOIN property_listings pl " +
+            "JOIN listings pl " +
             "  ON pl.property_id = p.property_id " +
             "ORDER BY u.id, pl.property_id";
 

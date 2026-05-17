@@ -32,7 +32,7 @@ public class Main {
     }
 
     private static final String INSERT_SQL =
-        "INSERT INTO properties (property_id, download_date, council_name, purchase_price, " +
+        "INSERT INTO sales (property_id, download_date, council_name, purchase_price, " +
         "address, post_code, property_type, strata_lot_number, property_name, area, " +
         "area_type, contract_date, settlement_date, zoning, nature_of_property, " +
         "primary_purpose, legal_description) " +

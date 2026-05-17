@@ -11,7 +11,7 @@ fi
 
 echo "Loading property data from CSV..."
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    COPY properties (
+    COPY sales (
         property_id, download_date, council_name, purchase_price,
         address, post_code, property_type, strata_lot_number,
         property_name, area, area_type, contract_date,
@@ -22,5 +22,5 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     WITH (FORMAT csv, HEADER true, NULL '');
 EOSQL
 
-COUNT=$(psql -t --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT COUNT(*) FROM properties;")
-echo "Loaded $COUNT properties."
+COUNT=$(psql -t --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT COUNT(*) FROM sales;")
+echo "Loaded $COUNT sales."

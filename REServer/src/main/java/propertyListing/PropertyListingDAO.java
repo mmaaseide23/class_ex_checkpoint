@@ -21,7 +21,7 @@ public class PropertyListingDAO extends BaseDAO {
     }
 
     public boolean newListing(PropertyListing listing) {
-        String sql = "INSERT INTO property_listings (property_id, listing_date, price) VALUES (?, ?, ?) ON CONFLICT (property_id, listing_date, price) DO NOTHING";
+        String sql = "INSERT INTO listings (property_id, listing_date, price) VALUES (?, ?, ?) ON CONFLICT (property_id, listing_date, price) DO NOTHING";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, listing.propertyId);
@@ -36,7 +36,7 @@ public class PropertyListingDAO extends BaseDAO {
     }
 
     public List<PropertyListing> getListingsByPropertyId(String propertyId) {
-        String sql = "SELECT * FROM property_listings WHERE property_id = ? ORDER BY listing_date";
+        String sql = "SELECT * FROM listings WHERE property_id = ? ORDER BY listing_date";
         List<PropertyListing> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -52,7 +52,7 @@ public class PropertyListingDAO extends BaseDAO {
     }
 
     public List<PropertyListing> getAllListings() {
-        String sql = "SELECT * FROM property_listings LIMIT 100";
+        String sql = "SELECT * FROM listings LIMIT 100";
         List<PropertyListing> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

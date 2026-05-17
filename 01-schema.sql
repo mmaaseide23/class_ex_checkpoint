@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS properties (
+CREATE TABLE IF NOT EXISTS sales (
     id              SERIAL PRIMARY KEY,
     property_id     BIGINT,
     download_date   DATE,
@@ -19,19 +19,19 @@ CREATE TABLE IF NOT EXISTS properties (
     legal_description TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_properties_property_id ON properties (property_id);
-CREATE INDEX IF NOT EXISTS idx_properties_post_code ON properties (post_code);
-CREATE INDEX IF NOT EXISTS idx_properties_purchase_price ON properties (purchase_price);
+CREATE INDEX IF NOT EXISTS idx_sales_property_id ON sales (property_id);
+CREATE INDEX IF NOT EXISTS idx_sales_post_code ON sales (post_code);
+CREATE INDEX IF NOT EXISTS idx_sales_purchase_price ON sales (purchase_price);
 
-CREATE TABLE IF NOT EXISTS property_listings (
+CREATE TABLE IF NOT EXISTS listings (
     id            SERIAL PRIMARY KEY,
     property_id   BIGINT NOT NULL,
     listing_date  DATE NOT NULL,
     price         BIGINT NOT NULL,
-    CONSTRAINT unique_property_listing UNIQUE (property_id, listing_date, price)
+    CONSTRAINT unique_listing UNIQUE (property_id, listing_date, price)
 );
 
-CREATE INDEX IF NOT EXISTS idx_property_listings_property_id ON property_listings (property_id);
+CREATE INDEX IF NOT EXISTS idx_listings_property_id ON listings (property_id);
 
 CREATE TABLE IF NOT EXISTS users (
     id           SERIAL PRIMARY KEY,

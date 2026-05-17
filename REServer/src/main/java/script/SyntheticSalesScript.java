@@ -16,7 +16,7 @@ public class SyntheticSalesScript {
     public static void main(String[] args) throws SQLException {
         try (Connection conn = DatabaseConfig.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute("DELETE FROM property_listings");
+            stmt.execute("DELETE FROM listings");
             System.out.println("Cleared existing listings");
         }
 
@@ -50,7 +50,7 @@ public class SyntheticSalesScript {
     private static List<Property> getRandom1000Properties() throws SQLException {
         String sql =
             "SELECT DISTINCT ON (property_id) id, property_id, purchase_price, address" +
-            " FROM properties" +
+            " FROM sales" +
             " WHERE purchase_price IS NOT NULL AND purchase_price > 0" +
             " ORDER BY property_id, settlement_date DESC NULLS LAST";
         String wrapped = "SELECT * FROM (" + sql + ") latest ORDER BY RANDOM() LIMIT 1100";

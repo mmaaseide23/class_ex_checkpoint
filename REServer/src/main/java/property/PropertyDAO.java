@@ -36,7 +36,7 @@ public class PropertyDAO extends BaseDAO {
     }
 
     public boolean newProperty(Property property) {
-        String sql = "INSERT INTO properties (property_id, post_code, purchase_price) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO sales (property_id, post_code, purchase_price) VALUES (?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, property.propertyId);
@@ -51,7 +51,7 @@ public class PropertyDAO extends BaseDAO {
     }
 
     public Optional<Property> getPropertyById(String propertyId) {
-        String sql = "SELECT * FROM properties WHERE property_id = ? LIMIT 1";
+        String sql = "SELECT * FROM sales WHERE property_id = ? LIMIT 1";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, Long.parseLong(propertyId));
@@ -67,7 +67,7 @@ public class PropertyDAO extends BaseDAO {
     }
 
     public List<Property> getPropertiesByPostCode(String postCode) {
-        String sql = "SELECT * FROM properties WHERE post_code = ? LIMIT 100";
+        String sql = "SELECT * FROM sales WHERE post_code = ? LIMIT 100";
         List<Property> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -83,7 +83,7 @@ public class PropertyDAO extends BaseDAO {
     }
 
     public List<Property> getAllProperties() {
-        String sql = "SELECT * FROM properties LIMIT 100";
+        String sql = "SELECT * FROM sales LIMIT 100";
         List<Property> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -98,7 +98,7 @@ public class PropertyDAO extends BaseDAO {
     }
 
     public List<Property> getPropertiesByPriceRange(long minPrice, long maxPrice) {
-        String sql = "SELECT * FROM properties WHERE purchase_price >= ? AND purchase_price <= ? LIMIT 100";
+        String sql = "SELECT * FROM sales WHERE purchase_price >= ? AND purchase_price <= ? LIMIT 100";
         List<Property> results = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
