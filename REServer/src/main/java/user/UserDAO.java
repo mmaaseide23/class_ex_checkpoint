@@ -1,175 +1,175 @@
 package user;
 
-import app.BaseDAO;
+import app.DatabaseConfig;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.result.DeleteResult;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
-public class UserDAO extends BaseDAO {
+public class UserDAO {
+
+    private MongoDatabase db() {
+        return DatabaseConfig.getDatabase();
+    }
+
+    private MongoCollection<Document> users() {
+        return db().getCollection("users");
+    }
+
+    private MongoCollection<Document> preferences() {
+        return db().getCollection("user_preferences");
+    }
 
     public User createUser(User user) {
-        String sql = "INSERT INTO users (first_name, last_name, email, phone) VALUES (?, ?, ?, ?) RETURNING id, created_date";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, user.firstName);
-            stmt.setString(2, user.lastName);
-            stmt.setString(3, user.email);
-            stmt.setString(4, user.phone);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                user.id = rs.getInt("id");
-                user.createdDate = rs.getDate("created_date").toLocalDate();
-            }
-            return user;
-        } catch (SQLException e) {
-            e.printStackTrace();
+        Document doc = new Document()
+            .append("first_name", user.firstName)
+            .append("last_name", user.lastName)
+            .append("email", user.email)
+            .append("phone", user.phone)
+            .append("created_date", LocalDate.now().toString());
+
+        Document existing = users().find(Filters.eq("email", user.email)).first();
+        if (existing != null) {
             return null;
         }
+
+        users().insertOne(doc);
+        user.id = doc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+        user.createdDate = LocalDate.now();
+        return user;
     }
 
     public Optional<User> getUserById(int id) {
-        String sql = "SELECT * FROM users WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return Optional.of(mapUser(rs));
+        for (Document doc : users().find()) {
+            int docId = doc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+            if (docId == id) {
+                return Optional.of(fromDoc(doc));
             }
-            return Optional.empty();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return Optional.empty();
         }
+        return Optional.empty();
     }
 
     public UserPreference addPreference(int userId, UserPreference pref) {
-        String sql = "INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (?, ?, ?) RETURNING id";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            stmt.setString(2, pref.preferenceType);
-            stmt.setString(3, pref.preferenceValue);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                pref.id = rs.getInt("id");
-                pref.userId = userId;
-            }
-            return pref;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
-        }
+        Document doc = new Document()
+            .append("user_id", userId)
+            .append("preference_type", pref.preferenceType)
+            .append("preference_value", pref.preferenceValue);
+        preferences().insertOne(doc);
+        pref.id = doc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+        pref.userId = userId;
+        return pref;
     }
 
     public List<UserPreference> getPreferences(int userId) {
-        String sql = "SELECT * FROM user_preferences WHERE user_id = ?";
         List<UserPreference> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapPreference(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (Document doc : preferences().find(Filters.eq("user_id", userId))) {
+            results.add(prefFromDoc(doc));
         }
         return results;
     }
 
     public boolean deletePreference(int prefId) {
-        String sql = "DELETE FROM user_preferences WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, prefId);
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
+        for (Document doc : preferences().find()) {
+            int docId = doc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+            if (docId == prefId) {
+                DeleteResult result = preferences().deleteOne(Filters.eq("_id", doc.getObjectId("_id")));
+                return result.getDeletedCount() > 0;
+            }
         }
+        return false;
     }
 
     public int countPreferencesByType(int userId, String type) {
-        String sql = "SELECT COUNT(*) FROM user_preferences WHERE user_id = ? AND preference_type = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            stmt.setString(2, type);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-            return 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
-        }
+        return (int) preferences().countDocuments(
+            Filters.and(Filters.eq("user_id", userId), Filters.eq("preference_type", type))
+        );
     }
 
     public List<UserNotification> getNotificationsForAllUsers() {
-        String sql =
-            "SELECT u.id, u.first_name, u.last_name, u.email, " +
-            "       pl.property_id, pl.price " +
-            "FROM users u " +
-            "JOIN user_preferences up " +
-            "  ON up.user_id = u.id AND up.preference_type = 'postcode' " +
-            "JOIN sales p " +
-            "  ON p.post_code = up.preference_value " +
-            "JOIN listings pl " +
-            "  ON pl.property_id = p.property_id " +
-            "ORDER BY u.id, pl.property_id";
+        MongoCollection<Document> salesCol = db().getCollection("sales");
+        MongoCollection<Document> listingsCol = db().getCollection("listings");
 
         Map<Integer, UserNotification> byUser = new LinkedHashMap<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                int uid = rs.getInt("id");
+
+        for (Document userDoc : users().find()) {
+            int uid = userDoc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+
+            Set<String> postcodes = new HashSet<>();
+            for (Document prefDoc : preferences().find(
+                    Filters.and(Filters.eq("user_id", uid), Filters.eq("preference_type", "postcode")))) {
+                postcodes.add(prefDoc.getString("preference_value"));
+            }
+            if (postcodes.isEmpty()) continue;
+
+            Set<Long> propertyIds = new HashSet<>();
+            for (String pc : postcodes) {
+                int pcInt = safeParseInt(pc);
+                for (Document saleDoc : salesCol.find(Filters.or(
+                        Filters.eq("post_code", pc),
+                        Filters.eq("post_code", pcInt)
+                ))) {
+                    Object pid = saleDoc.get("property_id");
+                    if (pid instanceof Long) propertyIds.add((Long) pid);
+                    else if (pid instanceof Integer) propertyIds.add(((Integer) pid).longValue());
+                }
+            }
+            if (propertyIds.isEmpty()) continue;
+
+            for (Document listingDoc : listingsCol.find(Filters.in("property_id", propertyIds))) {
                 UserNotification n = byUser.get(uid);
                 if (n == null) {
                     n = new UserNotification();
                     n.userId = uid;
-                    n.firstName = rs.getString("first_name");
-                    n.lastName = rs.getString("last_name");
-                    n.email = rs.getString("email");
+                    n.firstName = userDoc.getString("first_name");
+                    n.lastName = userDoc.getString("last_name");
+                    n.email = userDoc.getString("email");
                     byUser.put(uid, n);
                 }
                 UserNotification.MatchingListing ml = new UserNotification.MatchingListing();
-                ml.propertyId = rs.getLong("property_id");
-                ml.price = rs.getLong("price");
+                Object pid = listingDoc.get("property_id");
+                ml.propertyId = pid instanceof Long ? (Long) pid : ((Integer) pid).longValue();
+                Object price = listingDoc.get("price");
+                ml.price = price instanceof Long ? (Long) price : ((Integer) price).longValue();
                 n.listings.add(ml);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
         return new ArrayList<>(byUser.values());
     }
 
-    private UserPreference mapPreference(ResultSet rs) throws SQLException {
-        UserPreference p = new UserPreference();
-        p.id = rs.getInt("id");
-        p.userId = rs.getInt("user_id");
-        p.preferenceType = rs.getString("preference_type");
-        p.preferenceValue = rs.getString("preference_value");
-        return p;
+    private User fromDoc(Document doc) {
+        User u = new User();
+        u.id = doc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+        u.firstName = doc.getString("first_name");
+        u.lastName = doc.getString("last_name");
+        u.email = doc.getString("email");
+        u.phone = doc.getString("phone");
+        String cd = doc.getString("created_date");
+        if (cd != null) u.createdDate = LocalDate.parse(cd);
+        return u;
     }
 
-    private User mapUser(ResultSet rs) throws SQLException {
-        User u = new User();
-        u.id = rs.getInt("id");
-        u.firstName = rs.getString("first_name");
-        u.lastName = rs.getString("last_name");
-        u.email = rs.getString("email");
-        u.phone = rs.getString("phone");
-        if (rs.getDate("created_date") != null) {
-            u.createdDate = rs.getDate("created_date").toLocalDate();
-        }
-        return u;
+    private int safeParseInt(String val) {
+        try { return Integer.parseInt(val); }
+        catch (NumberFormatException e) { return -1; }
+    }
+
+    private UserPreference prefFromDoc(Document doc) {
+        UserPreference p = new UserPreference();
+        p.id = doc.getObjectId("_id").hashCode() & 0x7FFFFFFF;
+        p.userId = doc.getInteger("user_id");
+        p.preferenceType = doc.getString("preference_type");
+        p.preferenceValue = doc.getString("preference_value");
+        return p;
     }
 }

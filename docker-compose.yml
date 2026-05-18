@@ -1,19 +1,12 @@
 services:
   db:
-    image: postgres:17
-    container_name: realestate-db
-    environment:
-      POSTGRES_DB: realestate
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    image: mongo:7
+    container_name: realestate-mongo
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./02-load-csv.sh:/docker-entrypoint-initdb.d/02-load-csv.sh
-      - ./03-seed-data.sql:/docker-entrypoint-initdb.d/03-seed-data.sql
-      - ./REServer/data:/data:ro
+      - mongodata:/data/db
+      - ./REServer/data:/csv:ro
 
 volumes:
-  pgdata:
+  mongodata:

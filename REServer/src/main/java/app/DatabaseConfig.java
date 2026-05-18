@@ -1,17 +1,21 @@
 package app;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoDatabase;
 
 public class DatabaseConfig {
 
-    private static final String URL = env("DB_URL", "jdbc:postgresql://localhost:5432/realestate");
-    private static final String USER = env("DB_USER", "postgres");
-    private static final String PASS = env("DB_PASS", "postgres");
+    private static final String URI = env("MONGO_URI", "mongodb://localhost:27017");
+    private static final String DB_NAME = env("MONGO_DB", "realestate");
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASS);
+    private static MongoClient client;
+
+    public static synchronized MongoDatabase getDatabase() {
+        if (client == null) {
+            client = MongoClients.create(URI);
+        }
+        return client.getDatabase(DB_NAME);
     }
 
     private static String env(String key, String fallback) {

@@ -1,116 +1,126 @@
 package sale;
 
-import app.BaseDAO;
+import app.DatabaseConfig;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class SaleDAO extends BaseDAO {
+public class SaleDAO {
 
-    private Sale mapRow(ResultSet rs) throws SQLException {
+    private MongoCollection<Document> collection() {
+        return DatabaseConfig.getDatabase().getCollection("sales");
+    }
+
+    private Sale fromDoc(Document doc) {
         Sale s = new Sale();
-        s.id = rs.getInt("id");
-        s.propertyId = rs.getLong("property_id");
-        s.downloadDate = rs.getDate("download_date") != null ? rs.getDate("download_date").toLocalDate() : null;
-        s.councilName = rs.getString("council_name");
-        s.purchasePrice = rs.getLong("purchase_price");
-        s.address = rs.getString("address");
-        s.postCode = rs.getString("post_code");
-        s.propertyType = rs.getString("property_type");
-        s.strataLotNumber = rs.getString("strata_lot_number");
-        s.propertyName = rs.getString("property_name");
-        s.area = rs.getDouble("area");
-        s.areaType = rs.getString("area_type");
-        s.contractDate = rs.getDate("contract_date") != null ? rs.getDate("contract_date").toLocalDate() : null;
-        s.settlementDate = rs.getDate("settlement_date") != null ? rs.getDate("settlement_date").toLocalDate() : null;
-        s.zoning = rs.getString("zoning");
-        s.natureOfProperty = rs.getString("nature_of_property");
-        s.primaryPurpose = rs.getString("primary_purpose");
-        s.legalDescription = rs.getString("legal_description");
+        s.propertyId = doc.containsKey("property_id") ? toLong(doc.get("property_id")) : 0L;
+        s.councilName = toStr(doc.get("council_name"));
+        s.purchasePrice = doc.containsKey("purchase_price") ? toLong(doc.get("purchase_price")) : 0L;
+        s.address = toStr(doc.get("address"));
+        s.postCode = toStr(doc.get("post_code"));
+        s.propertyType = toStr(doc.get("property_type"));
+        s.strataLotNumber = toStr(doc.get("strata_lot_number"));
+        s.propertyName = toStr(doc.get("property_name"));
+        s.area = doc.containsKey("area") && doc.get("area") != null ? toDouble(doc.get("area")) : 0.0;
+        s.areaType = toStr(doc.get("area_type"));
+        s.zoning = toStr(doc.get("zoning"));
+        s.natureOfProperty = toStr(doc.get("nature_of_property"));
+        s.primaryPurpose = toStr(doc.get("primary_purpose"));
+        s.legalDescription = toStr(doc.get("legal_description"));
+        s.downloadDate = parseDate(toStr(doc.get("download_date")));
+        s.contractDate = parseDate(toStr(doc.get("contract_date")));
+        s.settlementDate = parseDate(toStr(doc.get("settlement_date")));
         return s;
     }
 
     public boolean newSale(Sale sale) {
-        String sql = "INSERT INTO sales (property_id, post_code, purchase_price) VALUES (?, ?, ?)";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, sale.propertyId);
-            stmt.setString(2, sale.postCode);
-            stmt.setLong(3, sale.purchasePrice);
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+        Document doc = new Document()
+            .append("property_id", sale.propertyId)
+            .append("post_code", sale.postCode)
+            .append("purchase_price", sale.purchasePrice);
+        collection().insertOne(doc);
+        return true;
     }
 
     public Optional<Sale> getSaleByPropertyId(String propertyId) {
-        String sql = "SELECT * FROM sales WHERE property_id = ? LIMIT 1";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, Long.parseLong(propertyId));
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return Optional.of(mapRow(rs));
-            }
-            return Optional.empty();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return Optional.empty();
+        Document doc = collection().find(Filters.eq("property_id", Long.parseLong(propertyId))).first();
+        if (doc != null) {
+            return Optional.of(fromDoc(doc));
         }
+        return Optional.empty();
     }
 
     public List<Sale> getSalesByPostCode(String postCode) {
-        String sql = "SELECT * FROM sales WHERE post_code = ? LIMIT 100";
         List<Sale> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, postCode);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        // post_code may be stored as int (from CSV) or string (from API)
+        for (Document doc : collection().find(Filters.or(
+                Filters.eq("post_code", postCode),
+                Filters.eq("post_code", safeParseInt(postCode))
+        )).limit(100)) {
+            results.add(fromDoc(doc));
         }
         return results;
     }
 
     public List<Sale> getAllSales() {
-        String sql = "SELECT * FROM sales LIMIT 100";
         List<Sale> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (Document doc : collection().find().limit(100)) {
+            results.add(fromDoc(doc));
         }
         return results;
     }
 
     public List<Sale> getSalesByPriceRange(long minPrice, long maxPrice) {
-        String sql = "SELECT * FROM sales WHERE purchase_price >= ? AND purchase_price <= ? LIMIT 100";
         List<Sale> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, minPrice);
-            stmt.setLong(2, maxPrice);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (Document doc : collection().find(Filters.and(
+                Filters.gte("purchase_price", minPrice),
+                Filters.lte("purchase_price", maxPrice)
+        )).limit(100)) {
+            results.add(fromDoc(doc));
         }
         return results;
+    }
+
+    private LocalDate parseDate(String val) {
+        if (val == null || val.isEmpty()) return null;
+        try { return LocalDate.parse(val); }
+        catch (Exception e) { return null; }
+    }
+
+    private long toLong(Object val) {
+        if (val instanceof Long) return (Long) val;
+        if (val instanceof Integer) return ((Integer) val).longValue();
+        if (val instanceof Double) return ((Double) val).longValue();
+        if (val instanceof String s && !s.isEmpty()) {
+            try { return Long.parseLong(s); }
+            catch (NumberFormatException e) { return 0L; }
+        }
+        return 0L;
+    }
+
+    private double toDouble(Object val) {
+        if (val instanceof Double) return (Double) val;
+        if (val instanceof Integer) return ((Integer) val).doubleValue();
+        if (val instanceof Long) return ((Long) val).doubleValue();
+        if (val instanceof String s && !s.isEmpty()) {
+            try { return Double.parseDouble(s); }
+            catch (NumberFormatException e) { return 0.0; }
+        }
+        return 0.0;
+    }
+
+    private String toStr(Object val) {
+        if (val == null) return null;
+        return val.toString();
+    }
+
+    private int safeParseInt(String val) {
+        try { return Integer.parseInt(val); }
+        catch (NumberFormatException e) { return -1; }
     }
 }

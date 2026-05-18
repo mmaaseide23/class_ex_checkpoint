@@ -1,73 +1,52 @@
 package script;
 
-import listing.Listing;
-import listing.ListingDAO;
-import sale.Sale;
-
 import app.DatabaseConfig;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
 
-import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public class SyntheticSalesScript {
 
-    public static void main(String[] args) throws SQLException {
-        try (Connection conn = DatabaseConfig.getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.execute("DELETE FROM listings");
-            System.out.println("Cleared existing listings");
+    public static void main(String[] args) {
+        MongoDatabase db = DatabaseConfig.getDatabase();
+        MongoCollection<Document> listings = db.getCollection("listings");
+        MongoCollection<Document> sales = db.getCollection("sales");
+
+        listings.drop();
+        System.out.println("Cleared existing listings");
+
+        List<Document> saleDocs = new ArrayList<>();
+        for (Document doc : sales.find().limit(1100)) {
+            Object price = doc.get("purchase_price");
+            long p = 0;
+            if (price instanceof Long) p = (Long) price;
+            else if (price instanceof Integer) p = ((Integer) price).longValue();
+            if (p > 0) saleDocs.add(doc);
+            if (saleDocs.size() >= 1000) break;
         }
 
-        List<Sale> randomSales = getRandom1000Sales();
-        System.out.println("Fetched " + randomSales.size() + " sales");
+        System.out.println("Fetched " + saleDocs.size() + " sales");
 
-        ListingDAO listingDAO = new ListingDAO();
-        LocalDate today = LocalDate.now();
-        int success = 0;
-        int skipped = 0;
+        String today = LocalDate.now().toString();
+        int count = 0;
+        for (Document saleDoc : saleDocs) {
+            Object pid = saleDoc.get("property_id");
+            long propertyId = pid instanceof Long ? (Long) pid : ((Integer) pid).longValue();
+            Object price = saleDoc.get("purchase_price");
+            long salePrice = price instanceof Long ? (Long) price : ((Integer) price).longValue();
 
-        for (Sale s : randomSales) {
-            if (success >= 1000) break;
-            if (s.purchasePrice <= 0) {
-                skipped++;
-                continue;
-            }
-
-            Listing listing = new Listing();
-            listing.propertyId = s.propertyId;
-            listing.listingDate = today;
-            listing.price = Math.round(s.purchasePrice * 1.20);
-
-            if (listingDAO.newListing(listing)) success++;
-            else skipped++;
+            Document listing = new Document()
+                .append("property_id", propertyId)
+                .append("listing_date", today)
+                .append("price", Math.round(salePrice * 1.20));
+            listings.insertOne(listing);
+            count++;
         }
 
-        System.out.println("Done! Created: " + success + " | Skipped/duplicate: " + skipped);
-    }
-
-    private static List<Sale> getRandom1000Sales() throws SQLException {
-        String sql =
-            "SELECT DISTINCT ON (property_id) id, property_id, purchase_price, address" +
-            " FROM sales" +
-            " WHERE purchase_price IS NOT NULL AND purchase_price > 0" +
-            " ORDER BY property_id, settlement_date DESC NULLS LAST";
-        String wrapped = "SELECT * FROM (" + sql + ") latest ORDER BY RANDOM() LIMIT 1100";
-
-        List<Sale> results = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(wrapped);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                Sale s = new Sale();
-                s.id = rs.getInt("id");
-                s.propertyId = rs.getLong("property_id");
-                s.purchasePrice = rs.getLong("purchase_price");
-                s.address = rs.getString("address");
-                results.add(s);
-            }
-        }
-        return results;
+        System.out.println("Done! Created: " + count);
     }
 }

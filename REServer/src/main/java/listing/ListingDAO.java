@@ -1,68 +1,71 @@
 package listing;
 
-import app.BaseDAO;
+import app.DatabaseConfig;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
+import org.bson.Document;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ListingDAO extends BaseDAO {
+public class ListingDAO {
 
-    private Listing mapRow(ResultSet rs) throws SQLException {
+    private MongoCollection<Document> collection() {
+        return DatabaseConfig.getDatabase().getCollection("listings");
+    }
+
+    private Listing fromDoc(Document doc) {
         Listing l = new Listing();
-        l.id = rs.getInt("id");
-        l.propertyId = rs.getLong("property_id");
-        l.listingDate = rs.getDate("listing_date").toLocalDate();
-        l.price = rs.getLong("price");
+        l.propertyId = doc.containsKey("property_id") ? toLong(doc.get("property_id")) : 0L;
+        l.price = doc.containsKey("price") ? toLong(doc.get("price")) : 0L;
+        String ld = doc.getString("listing_date");
+        l.listingDate = ld != null ? LocalDate.parse(ld) : null;
         return l;
     }
 
     public boolean newListing(Listing listing) {
-        String sql = "INSERT INTO listings (property_id, listing_date, price) VALUES (?, ?, ?) ON CONFLICT (property_id, listing_date, price) DO NOTHING";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, listing.propertyId);
-            stmt.setDate(2, java.sql.Date.valueOf(listing.listingDate));
-            stmt.setLong(3, listing.price);
-            stmt.executeUpdate();
+        Document existing = collection().find(Filters.and(
+            Filters.eq("property_id", listing.propertyId),
+            Filters.eq("listing_date", listing.listingDate.toString()),
+            Filters.eq("price", listing.price)
+        )).first();
+
+        if (existing != null) {
             return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
         }
+
+        Document doc = new Document()
+            .append("property_id", listing.propertyId)
+            .append("listing_date", listing.listingDate.toString())
+            .append("price", listing.price);
+        collection().insertOne(doc);
+        return true;
     }
 
     public List<Listing> getListingsByPropertyId(String propertyId) {
-        String sql = "SELECT * FROM listings WHERE property_id = ? ORDER BY listing_date";
         List<Listing> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, Long.parseLong(propertyId));
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (Document doc : collection().find(Filters.eq("property_id", Long.parseLong(propertyId)))
+                .sort(Sorts.ascending("listing_date"))) {
+            results.add(fromDoc(doc));
         }
         return results;
     }
 
     public List<Listing> getAllListings() {
-        String sql = "SELECT * FROM listings LIMIT 100";
         List<Listing> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (Document doc : collection().find().limit(100)) {
+            results.add(fromDoc(doc));
         }
         return results;
+    }
+
+    private long toLong(Object val) {
+        if (val instanceof Long) return (Long) val;
+        if (val instanceof Integer) return ((Integer) val).longValue();
+        if (val instanceof Double) return ((Double) val).longValue();
+        if (val instanceof String) return Long.parseLong((String) val);
+        return 0L;
     }
 }
