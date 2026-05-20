@@ -40,11 +40,15 @@ public class PurchaserController {
     }
 
     public void getPurchaser(Context ctx, String id) {
-        Optional<Purchaser> p = purchasers.getPurchaserById(Integer.parseInt(id));
-        if (p.isPresent()) {
-            ctx.status(200).json(p.get());
-        } else {
-            ctx.status(404).json("Purchaser not found");
+        try {
+            Optional<Purchaser> p = purchasers.getPurchaserById(Integer.parseInt(id));
+            if (p.isPresent()) {
+                ctx.status(200).json(p.get());
+            } else {
+                ctx.status(404).json("Purchaser not found");
+            }
+        } catch (NumberFormatException e) {
+            ctx.status(400).json("Invalid purchaser ID: must be numeric");
         }
     }
 
@@ -60,7 +64,13 @@ public class PurchaserController {
             return;
         }
 
-        int pid = Integer.parseInt(purchaserId);
+        int pid;
+        try {
+            pid = Integer.parseInt(purchaserId);
+        } catch (NumberFormatException e) {
+            ctx.status(400).json("Invalid purchaser ID: must be numeric");
+            return;
+        }
 
         if (pref.preferenceType.equals("postcode")) {
             int count = purchasers.countPreferencesByType(pid, "postcode");
@@ -79,16 +89,24 @@ public class PurchaserController {
     }
 
     public void getPreferences(Context ctx, String purchaserId) {
-        List<PurchaserPreference> prefs = purchasers.getPreferences(Integer.parseInt(purchaserId));
-        ctx.status(200).json(prefs);
+        try {
+            List<PurchaserPreference> prefs = purchasers.getPreferences(Integer.parseInt(purchaserId));
+            ctx.status(200).json(prefs);
+        } catch (NumberFormatException e) {
+            ctx.status(400).json("Invalid purchaser ID: must be numeric");
+        }
     }
 
     public void deletePreference(Context ctx, String prefId) {
-        boolean deleted = purchasers.deletePreference(Integer.parseInt(prefId));
-        if (deleted) {
-            ctx.status(200).json("Preference deleted");
-        } else {
-            ctx.status(404).json("Preference not found");
+        try {
+            boolean deleted = purchasers.deletePreference(Integer.parseInt(prefId));
+            if (deleted) {
+                ctx.status(200).json("Preference deleted");
+            } else {
+                ctx.status(404).json("Preference not found");
+            }
+        } catch (NumberFormatException e) {
+            ctx.status(400).json("Invalid preference ID: must be numeric");
         }
     }
 

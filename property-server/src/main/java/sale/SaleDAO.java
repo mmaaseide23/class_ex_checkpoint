@@ -36,12 +36,30 @@ public class SaleDAO extends BaseDAO {
     }
 
     public boolean newSale(Sale sale) {
-        String sql = "INSERT INTO sales (property_id, post_code, purchase_price) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO sales (property_id, download_date, council_name, purchase_price, "
+                + "address, post_code, property_type, strata_lot_number, property_name, area, "
+                + "area_type, contract_date, settlement_date, zoning, nature_of_property, "
+                + "primary_purpose, legal_description) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, sale.propertyId);
-            stmt.setString(2, sale.postCode);
-            stmt.setLong(3, sale.purchasePrice);
+            stmt.setDate(2, sale.downloadDate != null ? java.sql.Date.valueOf(sale.downloadDate) : null);
+            stmt.setString(3, sale.councilName);
+            stmt.setLong(4, sale.purchasePrice);
+            stmt.setString(5, sale.address);
+            stmt.setString(6, sale.postCode);
+            stmt.setString(7, sale.propertyType);
+            stmt.setString(8, sale.strataLotNumber);
+            stmt.setString(9, sale.propertyName);
+            stmt.setDouble(10, sale.area);
+            stmt.setString(11, sale.areaType);
+            stmt.setDate(12, sale.contractDate != null ? java.sql.Date.valueOf(sale.contractDate) : null);
+            stmt.setDate(13, sale.settlementDate != null ? java.sql.Date.valueOf(sale.settlementDate) : null);
+            stmt.setString(14, sale.zoning);
+            stmt.setString(15, sale.natureOfProperty);
+            stmt.setString(16, sale.primaryPurpose);
+            stmt.setString(17, sale.legalDescription);
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {

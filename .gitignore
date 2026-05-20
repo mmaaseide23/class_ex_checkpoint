@@ -1,7 +1,7 @@
-nsw_property_data.csv
-nsw_property_data.csv
-CLAUDE.md
 target/
-logs/
-.pids/
+*.csv
 .DS_Store
+.idea/
+.vscode/
+.claude/
+CLAUDE.md

@@ -1,5 +1,7 @@
 package analytics;
 
+import app.EventPublisher;
+import app.RabbitConfig;
 import io.javalin.http.Context;
 
 public class AnalyticsController {
@@ -33,5 +35,17 @@ public class AnalyticsController {
         }
         accessCounts.increment(event.type, event.value);
         ctx.status(204);
+
+        // Emit "hot property" event when a property access is recorded
+        if ("property".equals(event.type)) {
+            try {
+                String json = String.format(
+                        "{\"eventType\":\"PROPERTY_HOT\",\"accessType\":\"%s\",\"accessValue\":\"%s\"}",
+                        event.type, event.value);
+                EventPublisher.publish(RabbitConfig.PROPERTY_HOT_KEY, json);
+            } catch (Exception e) {
+                System.err.println("Event publish failed: " + e.getMessage());
+            }
+        }
     }
 }

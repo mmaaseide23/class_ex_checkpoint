@@ -15,7 +15,7 @@ public class PropertyServer {
         var saleController = new SaleController(saleDAO);
 
         var listingDAO = new ListingDAO();
-        var listingController = new ListingController(listingDAO);
+        var listingController = new ListingController(listingDAO, saleDAO);
 
         Javalin.create()
             .get("/", ctx -> ctx.result("Property server is running"))
