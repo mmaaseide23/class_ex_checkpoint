@@ -17,8 +17,10 @@ public class PropertyServer {
         var listingDAO = new ListingDAO();
         var listingController = new ListingController(listingDAO, saleDAO);
 
-        Javalin.create()
-            .get("/", ctx -> ctx.result("Property server is running"))
+        var app = Javalin.create();
+        SwaggerSetup.register(app, "Property Server", OPENAPI_SPEC);
+
+        app.get("/", ctx -> ctx.result("Property server is running"))
             // Sale
             .get("/sale", saleController::getAllSales)
             .post("/sale", saleController::createSale)
@@ -42,4 +44,60 @@ public class PropertyServer {
         String p = System.getenv("PROPERTY_PORT");
         return (p == null || p.isBlank()) ? 7071 : Integer.parseInt(p);
     }
+
+    private static final String OPENAPI_SPEC = """
+        {
+          "openapi": "3.0.3",
+          "info": { "title": "Property Server", "version": "1.0", "description": "Owns sales and listings data. Publishes property.changed events to RabbitMQ." },
+          "paths": {
+            "/sale": {
+              "get": { "summary": "Get all sales", "description": "Supports optional ?minPrice=X&maxPrice=Y filtering", "parameters": [
+                { "name": "minPrice", "in": "query", "schema": { "type": "integer" } },
+                { "name": "maxPrice", "in": "query", "schema": { "type": "integer" } }
+              ], "responses": { "200": { "description": "Array of sales" } } },
+              "post": { "summary": "Create a sale (fires property.changed event)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Sale" },
+                "example": { "propertyId": 11111111, "postCode": "2830", "address": "99 Demo Street, Bourke", "purchasePrice": 450000, "councilName": "Bourke Shire", "propertyType": "House", "zoning": "Residential" }
+              } } }, "responses": { "201": { "description": "Sale Created" }, "400": { "description": "Failed" } } }
+            },
+            "/sale/{propertyID}": {
+              "get": { "summary": "Get sale by property ID", "parameters": [
+                { "name": "propertyID", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "responses": { "200": { "description": "Sale object" }, "404": { "description": "Not found" } } }
+            },
+            "/sale/postcode/{postcode}": {
+              "get": { "summary": "Get sales by postcode", "parameters": [
+                { "name": "postcode", "in": "path", "required": true, "schema": { "type": "string" } }
+              ], "responses": { "200": { "description": "Array of sales" } } }
+            },
+            "/listing": {
+              "get": { "summary": "Get all listings", "responses": { "200": { "description": "Array of listings" } } },
+              "post": { "summary": "Create a listing (fires property.changed event)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Listing" },
+                "example": { "propertyId": 2021000, "listingDate": "2026-05-21", "price": 3800000 }
+              } } }, "responses": { "201": { "description": "Listing Created" }, "400": { "description": "Failed" } } }
+            },
+            "/listing/{propertyID}": {
+              "get": { "summary": "Get listings by property ID", "parameters": [
+                { "name": "propertyID", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "responses": { "200": { "description": "Array of listings" } } }
+            },
+            "/listing/postcode/{postcode}": {
+              "get": { "summary": "Get listings by postcode (JOINs with sales)", "parameters": [
+                { "name": "postcode", "in": "path", "required": true, "schema": { "type": "string" } }
+              ], "responses": { "200": { "description": "Array of listings with postcode info" } } }
+            }
+          },
+          "components": { "schemas": {
+            "Sale": { "type": "object", "properties": {
+              "propertyId": { "type": "integer" }, "postCode": { "type": "string" },
+              "address": { "type": "string" }, "purchasePrice": { "type": "integer" },
+              "councilName": { "type": "string" }, "propertyType": { "type": "string" },
+              "zoning": { "type": "string" }, "primaryPurpose": { "type": "string" }
+            } },
+            "Listing": { "type": "object", "properties": {
+              "propertyId": { "type": "integer" }, "listingDate": { "type": "string", "format": "date" },
+              "price": { "type": "integer" }
+            } }
+          } }
+        }
+        """;
 }
