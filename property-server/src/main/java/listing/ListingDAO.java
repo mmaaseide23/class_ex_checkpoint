@@ -56,29 +56,19 @@ public class ListingDAO extends BaseDAO {
     }
 
     public boolean updateListing(int id, Long newPrice, String newStatus) {
-        StringBuilder sql = new StringBuilder("UPDATE listings SET ");
-        List<Object> params = new ArrayList<>();
-        if (newPrice != null) {
-            sql.append("price = ?");
-            params.add(newPrice);
-        }
-        if (newStatus != null) {
-            if (!params.isEmpty()) sql.append(", ");
-            sql.append("status = ?");
-            params.add(newStatus);
-        }
-        if (params.isEmpty()) return false;
-        sql.append(" WHERE id = ?");
-        params.add(id);
+        if (newPrice == null && newStatus == null) return false;
+
+        String setClause = (newPrice != null && newStatus != null) ? "price = ?, status = ?"
+                : (newPrice != null) ? "price = ?"
+                : "status = ?";
+        String sql = "UPDATE listings SET " + setClause + " WHERE id = ?";
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) {
-                Object p = params.get(i);
-                if (p instanceof Long lp) stmt.setLong(i + 1, lp);
-                else if (p instanceof Integer ip) stmt.setInt(i + 1, ip);
-                else stmt.setString(i + 1, (String) p);
-            }
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int idx = 1;
+            if (newPrice != null) stmt.setLong(idx++, newPrice);
+            if (newStatus != null) stmt.setString(idx++, newStatus);
+            stmt.setInt(idx, id);
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();

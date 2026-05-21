@@ -25,21 +25,19 @@ public class ListingController {
 
     public void createListing(Context ctx) {
         Listing listing = ctx.bodyValidator(Listing.class).get();
-        if (listings.newListing(listing)) {
-            ctx.status(201).json("Listing Created");
-
-            // Look up the postcode from the sales table and emit event
-            try {
-                sales.getSaleByPropertyId(String.valueOf(listing.propertyId)).ifPresent(sale -> {
-                    publishChange("NEW_LISTING", listing.propertyId, sale.postCode, sale.address,
-                            listing.price, listing.status != null ? listing.status : "Pending");
-                });
-            } catch (Exception e) {
-                System.err.println("Event lookup failed: " + e.getMessage());
-            }
-        } else {
+        if (!listings.newListing(listing)) {
             ctx.status(400).json("Failed to add listing");
+            return;
         }
+        ctx.status(201).json("Listing Created");
+
+        sales.getSaleByPropertyId(String.valueOf(listing.propertyId)).ifPresent(sale -> {
+            String status = listing.status != null ? listing.status : "Pending";
+            ObjectNode event = baseEvent("NEW_LISTING", listing.propertyId, sale.postCode, sale.address)
+                    .put("purchasePrice", listing.price)
+                    .put("status", status);
+            publish(event);
+        });
     }
 
     public void updateListing(Context ctx, String idParam) {
@@ -94,21 +92,22 @@ public class ListingController {
 
         ctx.status(200).json("Listing updated");
 
-        // Fire one event per type of change so consumers can format distinct messages.
+        // One event per kind of change so consumers can format distinct messages.
         Optional<Sale> saleOpt = sales.getSaleByPropertyId(String.valueOf(before.propertyId));
-        if (saleOpt.isEmpty()) {
-            System.err.println("Could not resolve postcode for property " + before.propertyId);
-            return;
-        }
+        if (saleOpt.isEmpty()) return;
         Sale sale = saleOpt.get();
+        long effectivePrice = priceChanged ? newPrice : before.price;
 
         if (priceChanged) {
-            publishPriceChange(before.propertyId, sale.postCode, sale.address,
-                    before.price, newPrice);
+            publish(baseEvent("PRICE_CHANGE", before.propertyId, sale.postCode, sale.address)
+                    .put("oldPrice", before.price)
+                    .put("purchasePrice", newPrice));
         }
         if (statusChanged) {
-            publishStatusChange(before.propertyId, sale.postCode, sale.address,
-                    before.status, newStatus, priceChanged ? newPrice : before.price);
+            publish(baseEvent("STATUS_CHANGE", before.propertyId, sale.postCode, sale.address)
+                    .put("purchasePrice", effectivePrice)
+                    .put("oldStatus", before.status)
+                    .put("status", newStatus));
         }
     }
 
@@ -125,52 +124,17 @@ public class ListingController {
         ctx.status(200).json(matches);
     }
 
-    private void publishChange(String action, long propertyId, String postCode,
-                                String address, long price, String status) {
-        try {
-            ObjectNode event = MAPPER.createObjectNode()
-                    .put("eventType", "PROPERTY_CHANGED")
-                    .put("propertyId", propertyId)
-                    .put("postCode", postCode)
-                    .put("address", address)
-                    .put("purchasePrice", price)
-                    .put("status", status)
-                    .put("action", action);
-            EventPublisher.publish(RabbitConfig.PROPERTY_CHANGED_KEY, event.toString());
-        } catch (Exception e) {
-            System.err.println("Event publish failed: " + e.getMessage());
-        }
+    private static ObjectNode baseEvent(String action, long propertyId, String postCode, String address) {
+        return MAPPER.createObjectNode()
+                .put("eventType", "PROPERTY_CHANGED")
+                .put("action", action)
+                .put("propertyId", propertyId)
+                .put("postCode", postCode)
+                .put("address", address);
     }
 
-    private void publishPriceChange(long propertyId, String postCode, String address,
-                                     long oldPrice, long newPrice) {
+    private static void publish(ObjectNode event) {
         try {
-            ObjectNode event = MAPPER.createObjectNode()
-                    .put("eventType", "PROPERTY_CHANGED")
-                    .put("propertyId", propertyId)
-                    .put("postCode", postCode)
-                    .put("address", address)
-                    .put("oldPrice", oldPrice)
-                    .put("purchasePrice", newPrice)
-                    .put("action", "PRICE_CHANGE");
-            EventPublisher.publish(RabbitConfig.PROPERTY_CHANGED_KEY, event.toString());
-        } catch (Exception e) {
-            System.err.println("Event publish failed: " + e.getMessage());
-        }
-    }
-
-    private void publishStatusChange(long propertyId, String postCode, String address,
-                                      String oldStatus, String newStatus, long price) {
-        try {
-            ObjectNode event = MAPPER.createObjectNode()
-                    .put("eventType", "PROPERTY_CHANGED")
-                    .put("propertyId", propertyId)
-                    .put("postCode", postCode)
-                    .put("address", address)
-                    .put("purchasePrice", price)
-                    .put("oldStatus", oldStatus)
-                    .put("status", newStatus)
-                    .put("action", "STATUS_CHANGE");
             EventPublisher.publish(RabbitConfig.PROPERTY_CHANGED_KEY, event.toString());
         } catch (Exception e) {
             System.err.println("Event publish failed: " + e.getMessage());
