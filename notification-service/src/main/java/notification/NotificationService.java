@@ -92,8 +92,9 @@ public class NotificationService {
         }
 
         String address = event.path("address").asText("Unknown");
-        long price = event.path("purchasePrice").asLong(0);
         long propertyId = event.path("propertyId").asLong(0);
+        String action = event.path("action").asText("");
+        String message = buildPropertyChangedMessage(event, action, address, postCode);
 
         JsonNode purchasers = fetchPurchasersWithPostcodePrefs();
         if (purchasers == null || !purchasers.isArray()) return;
@@ -106,10 +107,9 @@ public class NotificationService {
                         .put("purchaserName",
                                 p.path("firstName").asText() + " " + p.path("lastName").asText())
                         .put("email", p.path("email").asText())
-                        .put("message", String.format(
-                                "New property listed at %s (postcode %s) for $%,d",
-                                address, postCode, price))
+                        .put("message", message)
                         .put("eventType", "PROPERTY_CHANGED")
+                        .put("action", action)
                         .put("propertyId", propertyId);
 
                 ch.basicPublish("", RabbitConfig.PURCHASER_QUEUE, null,
@@ -117,19 +117,39 @@ public class NotificationService {
                 sent++;
             }
         }
-        System.out.println("[NotificationService] Sent " + sent + " PROPERTY_CHANGED notifications");
+        System.out.println("[NotificationService] Sent " + sent + " PROPERTY_CHANGED (" + action + ") notifications");
+    }
+
+    private static String buildPropertyChangedMessage(JsonNode event, String action,
+                                                      String address, String postCode) {
+        return switch (action) {
+            case "PRICE_CHANGED" -> String.format(
+                    "Price changed for property at %s (postcode %s): $%,d → $%,d",
+                    address, postCode,
+                    event.path("oldPrice").asLong(0),
+                    event.path("newPrice").asLong(0));
+            case "STATUS_CHANGED" -> String.format(
+                    "Status changed for property at %s (postcode %s): %s → %s",
+                    address, postCode,
+                    event.path("oldStatus").asText(""),
+                    event.path("newStatus").asText(""));
+            default -> String.format(
+                    "New property listed at %s (postcode %s) for $%,d",
+                    address, postCode,
+                    event.path("purchasePrice").asLong(0));
+        };
     }
 
     /**
      * A property is trending (search/access count incremented).
-     * We need to fetch the property details from the property-server
-     * to find its postcode, then match interested purchasers.
+     * We only notify when the property is currently "for sale" — i.e. has a
+     * Pending listing — so we look up both the property and its listings.
      */
     private static void handlePropertyHot(Channel ch, JsonNode event) throws Exception {
         String propertyId = event.path("accessValue").asText("");
         if (propertyId.isEmpty()) return;
+        long count = event.path("count").asLong(0);
 
-        // Look up property to get the postcode
         JsonNode property = fetchPropertyDetails(propertyId);
         if (property == null) {
             System.out.println("[NotificationService] Could not fetch property " + propertyId);
@@ -140,6 +160,14 @@ public class NotificationService {
         if (postCode.isEmpty()) return;
         String address = property.path("address").asText("Unknown");
 
+        // Only notify for properties currently "for sale" (have a Pending listing)
+        JsonNode listings = fetchListings(propertyId);
+        if (!hasPendingListing(listings)) {
+            System.out.println("[NotificationService] Property " + propertyId
+                    + " has no Pending listing; skipping HOT notification");
+            return;
+        }
+
         JsonNode purchasers = fetchPurchasersWithPostcodePrefs();
         if (purchasers == null || !purchasers.isArray()) return;
 
@@ -152,17 +180,44 @@ public class NotificationService {
                                 p.path("firstName").asText() + " " + p.path("lastName").asText())
                         .put("email", p.path("email").asText())
                         .put("message", String.format(
-                                "Hot property alert! Property at %s (postcode %s) is trending",
-                                address, postCode))
+                                "Hot property alert! %s (postcode %s) has been viewed %d times",
+                                address, postCode, count))
                         .put("eventType", "PROPERTY_HOT")
-                        .put("propertyId", Long.parseLong(propertyId));
+                        .put("propertyId", Long.parseLong(propertyId))
+                        .put("count", count);
 
                 ch.basicPublish("", RabbitConfig.PURCHASER_QUEUE, null,
                         note.toString().getBytes(StandardCharsets.UTF_8));
                 sent++;
             }
         }
-        System.out.println("[NotificationService] Sent " + sent + " PROPERTY_HOT notifications");
+        System.out.println("[NotificationService] Sent " + sent
+                + " PROPERTY_HOT notifications (count=" + count + ")");
+    }
+
+    private static boolean hasPendingListing(JsonNode listings) {
+        if (listings == null || !listings.isArray()) return false;
+        for (JsonNode l : listings) {
+            if ("Pending".equals(l.path("status").asText())) return true;
+        }
+        return false;
+    }
+
+    private static JsonNode fetchListings(String propertyId) {
+        String url = PROPERTY_URL + "/listing/" + propertyId;
+        try {
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200) {
+                JsonNode body = MAPPER.readTree(resp.body());
+                int n = body.isArray() ? body.size() : 0;
+                System.out.println("[NotificationService] HTTP GET " + url + " -> 200 (" + n + " listings)");
+                return body;
+            }
+        } catch (Exception e) {
+            System.err.println("[NotificationService] Failed to fetch listings: " + e.getMessage());
+        }
+        return null;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────
@@ -178,12 +233,17 @@ public class NotificationService {
     }
 
     private static JsonNode fetchPurchasersWithPostcodePrefs() {
+        String url = PURCHASERS_URL + "/purchaser/with-postcode-prefs";
         try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(PURCHASERS_URL + "/purchaser/with-postcode-prefs"))
-                    .GET().build();
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) return MAPPER.readTree(resp.body());
+            if (resp.statusCode() == 200) {
+                JsonNode body = MAPPER.readTree(resp.body());
+                int count = body.isArray() ? body.size() : 0;
+                System.out.println("[NotificationService] HTTP GET " + url + " -> 200 (" + count + " purchasers)");
+                return body;
+            }
+            System.err.println("[NotificationService] HTTP GET " + url + " -> " + resp.statusCode());
         } catch (Exception e) {
             System.err.println("[NotificationService] Failed to fetch purchasers: " + e.getMessage());
         }
@@ -191,12 +251,15 @@ public class NotificationService {
     }
 
     private static JsonNode fetchPropertyDetails(String propertyId) {
+        String url = PROPERTY_URL + "/sale/" + propertyId;
         try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(PROPERTY_URL + "/sale/" + propertyId))
-                    .GET().build();
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) return MAPPER.readTree(resp.body());
+            if (resp.statusCode() == 200) {
+                System.out.println("[NotificationService] HTTP GET " + url + " -> 200");
+                return MAPPER.readTree(resp.body());
+            }
+            System.err.println("[NotificationService] HTTP GET " + url + " -> " + resp.statusCode());
         } catch (Exception e) {
             System.err.println("[NotificationService] Failed to fetch property: " + e.getMessage());
         }

@@ -37,6 +37,8 @@ public class ApiGateway {
             .get("/listing", listing::getAll)
             .post("/listing", listing::create)
             .get("/listing/{propertyID}", listing::getByProperty)
+            .patch("/listing/{id}/price", listing::updatePrice)
+            .patch("/listing/{id}/status", listing::updateStatus)
 
             // Purchaser (passthrough to Purchasers)
             .post("/purchaser", purchaser::register)
@@ -100,6 +102,20 @@ public class ApiGateway {
               "get": { "summary": "Get listings by property ID", "parameters": [
                 { "name": "propertyID", "in": "path", "required": true, "schema": { "type": "integer" } }
               ], "responses": { "200": { "description": "Array of listings" } } }
+            },
+            "/listing/{id}/price": {
+              "patch": { "summary": "Update a listing's price (fires property.changed event)", "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "requestBody": { "required": true, "content": { "application/json": {
+                "example": { "price": 4200000 }
+              } } }, "responses": { "200": { "description": "Price updated" }, "404": { "description": "Listing not found" } } }
+            },
+            "/listing/{id}/status": {
+              "patch": { "summary": "Update a listing's status (fires property.changed event)", "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "requestBody": { "required": true, "content": { "application/json": {
+                "example": { "status": "Sold" }
+              } } }, "responses": { "200": { "description": "Status updated" }, "404": { "description": "Listing not found" } } }
             },
             "/purchaser": {
               "post": { "summary": "Register a purchaser (passthrough)", "requestBody": { "required": true, "content": { "application/json": {

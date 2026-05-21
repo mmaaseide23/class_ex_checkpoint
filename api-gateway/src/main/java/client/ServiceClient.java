@@ -77,6 +77,20 @@ public class ServiceClient {
         }
     }
 
+    public HttpResponse<String> patchJson(String url, Object body) {
+        try {
+            String json = MAPPER.writeValueAsString(body);
+            return http.send(
+                HttpRequest.newBuilder(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(json))
+                    .build(),
+                HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            throw new RuntimeException("PATCH " + url + " failed: " + e.getMessage(), e);
+        }
+    }
+
     /** Fire-and-forget POST. Used for telemetry where a downed callee must not break the user request. */
     public CompletableFuture<Void> postJsonAsync(String url, Object body) {
         try {

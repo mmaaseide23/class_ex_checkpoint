@@ -50,6 +50,20 @@ public class ListingGateway {
         ctx.status(res.statusCode()).result(res.body());
     }
 
+    public void updatePrice(Context ctx) {
+        String id = ctx.pathParam("id");
+        Map<String, Object> body = parseBody(ctx);
+        var res = client.patchJson(urls.property + "/listing/" + id + "/price", body);
+        ctx.status(res.statusCode()).result(res.body());
+    }
+
+    public void updateStatus(Context ctx) {
+        String id = ctx.pathParam("id");
+        Map<String, Object> body = parseBody(ctx);
+        var res = client.patchJson(urls.property + "/listing/" + id + "/status", body);
+        ctx.status(res.statusCode()).result(res.body());
+    }
+
     private void recordAccessAsync(String type, String value) {
         Map<String, String> event = new HashMap<>();
         event.put("type", type);

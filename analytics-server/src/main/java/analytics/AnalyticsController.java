@@ -33,15 +33,15 @@ public class AnalyticsController {
             ctx.status(400).json("type and value are required");
             return;
         }
-        accessCounts.increment(event.type, event.value);
+        int newCount = accessCounts.increment(event.type, event.value);
         ctx.status(204);
 
         // Emit "hot property" event when a property access is recorded
         if ("property".equals(event.type)) {
             try {
                 String json = String.format(
-                        "{\"eventType\":\"PROPERTY_HOT\",\"accessType\":\"%s\",\"accessValue\":\"%s\"}",
-                        event.type, event.value);
+                        "{\"eventType\":\"PROPERTY_HOT\",\"accessType\":\"%s\",\"accessValue\":\"%s\",\"count\":%d}",
+                        event.type, event.value, newCount);
                 EventPublisher.publish(RabbitConfig.PROPERTY_HOT_KEY, json);
             } catch (Exception e) {
                 System.err.println("Event publish failed: " + e.getMessage());

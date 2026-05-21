@@ -35,6 +35,10 @@ public class PropertyServer {
                 listingController.getListingsByProperty(ctx, ctx.pathParam("propertyID")))
             .get("/listing/postcode/{postcode}", ctx ->
                 listingController.getListingsByPostCode(ctx, ctx.pathParam("postcode")))
+            .patch("/listing/{id}/price", ctx ->
+                listingController.updatePrice(ctx, Integer.parseInt(ctx.pathParam("id"))))
+            .patch("/listing/{id}/status", ctx ->
+                listingController.updateStatus(ctx, Integer.parseInt(ctx.pathParam("id"))))
             .start(port);
 
         System.out.println("Property server listening on " + port);
@@ -84,6 +88,20 @@ public class PropertyServer {
               "get": { "summary": "Get listings by postcode (JOINs with sales)", "parameters": [
                 { "name": "postcode", "in": "path", "required": true, "schema": { "type": "string" } }
               ], "responses": { "200": { "description": "Array of listings with postcode info" } } }
+            },
+            "/listing/{id}/price": {
+              "patch": { "summary": "Update a listing's price (fires property.changed event with action PRICE_CHANGED)", "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "requestBody": { "required": true, "content": { "application/json": {
+                "example": { "price": 4200000 }
+              } } }, "responses": { "200": { "description": "Updated" }, "400": { "description": "Bad request" }, "404": { "description": "Not found" } } }
+            },
+            "/listing/{id}/status": {
+              "patch": { "summary": "Update a listing's status (fires property.changed event with action STATUS_CHANGED)", "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "requestBody": { "required": true, "content": { "application/json": {
+                "example": { "status": "Sold" }
+              } } }, "responses": { "200": { "description": "Updated" }, "400": { "description": "Bad request" }, "404": { "description": "Not found" } } }
             }
           },
           "components": { "schemas": {

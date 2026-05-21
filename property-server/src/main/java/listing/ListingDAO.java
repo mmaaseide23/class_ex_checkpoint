@@ -17,7 +17,48 @@ public class ListingDAO extends BaseDAO {
         l.propertyId = rs.getLong("property_id");
         l.listingDate = rs.getDate("listing_date").toLocalDate();
         l.price = rs.getLong("price");
+        l.status = rs.getString("status");
         return l;
+    }
+
+    public java.util.Optional<Listing> getById(int id) {
+        String sql = "SELECT * FROM listings WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return java.util.Optional.of(mapRow(rs));
+            return java.util.Optional.empty();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return java.util.Optional.empty();
+        }
+    }
+
+    public boolean updatePrice(int id, long newPrice) {
+        String sql = "UPDATE listings SET price = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, newPrice);
+            stmt.setInt(2, id);
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateStatus(int id, String newStatus) {
+        String sql = "UPDATE listings SET status = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newStatus);
+            stmt.setInt(2, id);
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public boolean newListing(Listing listing) {

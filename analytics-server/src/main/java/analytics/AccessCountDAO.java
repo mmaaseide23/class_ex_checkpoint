@@ -11,19 +11,23 @@ import java.util.List;
 
 public class AccessCountDAO extends BaseDAO {
 
-    public void increment(String accessType, String accessValue) {
+    public int increment(String accessType, String accessValue) {
         String sql =
             "INSERT INTO access_counts (access_type, access_value, count, last_accessed) " +
             "VALUES (?, ?, 1, CURRENT_TIMESTAMP) " +
             "ON CONFLICT (access_type, access_value) " +
-            "DO UPDATE SET count = access_counts.count + 1, last_accessed = CURRENT_TIMESTAMP";
+            "DO UPDATE SET count = access_counts.count + 1, last_accessed = CURRENT_TIMESTAMP " +
+            "RETURNING count";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, accessType);
             stmt.setString(2, accessValue);
-            stmt.executeUpdate();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
+            return 0;
         }
     }
 
