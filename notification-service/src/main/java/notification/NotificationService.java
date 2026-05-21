@@ -83,6 +83,7 @@ public class NotificationService {
     /**
      * A property was listed / price changed / status changed.
      * The event already carries the postcode so we can match purchasers directly.
+     * The `action` field tells us which message to format.
      */
     private static void handlePropertyChanged(Channel ch, JsonNode event) throws Exception {
         String postCode = event.path("postCode").asText("");
@@ -91,9 +92,11 @@ public class NotificationService {
             return;
         }
 
+        String action = event.path("action").asText("NEW_LISTING");
         String address = event.path("address").asText("Unknown");
         long price = event.path("purchasePrice").asLong(0);
         long propertyId = event.path("propertyId").asLong(0);
+        String message = formatMessage(action, address, postCode, price, event);
 
         JsonNode purchasers = fetchPurchasersWithPostcodePrefs();
         if (purchasers == null || !purchasers.isArray()) return;
@@ -106,10 +109,9 @@ public class NotificationService {
                         .put("purchaserName",
                                 p.path("firstName").asText() + " " + p.path("lastName").asText())
                         .put("email", p.path("email").asText())
-                        .put("message", String.format(
-                                "New property listed at %s (postcode %s) for $%,d",
-                                address, postCode, price))
+                        .put("message", message)
                         .put("eventType", "PROPERTY_CHANGED")
+                        .put("action", action)
                         .put("propertyId", propertyId);
 
                 ch.basicPublish("", RabbitConfig.PURCHASER_QUEUE, null,
@@ -117,7 +119,35 @@ public class NotificationService {
                 sent++;
             }
         }
-        System.out.println("[NotificationService] Sent " + sent + " PROPERTY_CHANGED notifications");
+        System.out.println("[NotificationService] Sent " + sent + " " + action + " notifications");
+    }
+
+    private static String formatMessage(String action, String address, String postCode,
+                                         long price, JsonNode event) {
+        return switch (action) {
+            case "NEW_SALE" -> String.format(
+                    "New sale registered at %s (postcode %s) for $%,d",
+                    address, postCode, price);
+            case "NEW_LISTING" -> String.format(
+                    "New listing at %s (postcode %s) priced at $%,d",
+                    address, postCode, price);
+            case "PRICE_CHANGE" -> {
+                long oldPrice = event.path("oldPrice").asLong(0);
+                yield String.format(
+                        "Price change at %s (postcode %s): was $%,d, now $%,d",
+                        address, postCode, oldPrice, price);
+            }
+            case "STATUS_CHANGE" -> {
+                String oldStatus = event.path("oldStatus").asText("?");
+                String newStatus = event.path("status").asText("?");
+                yield String.format(
+                        "Status change at %s (postcode %s): %s -> %s",
+                        address, postCode, oldStatus, newStatus);
+            }
+            default -> String.format(
+                    "Property update at %s (postcode %s)",
+                    address, postCode);
+        };
     }
 
     /**

@@ -36,6 +36,7 @@ public class ApiGateway {
             // Listing (orchestrates Property + fire-and-forget Analytics)
             .get("/listing", listing::getAll)
             .post("/listing", listing::create)
+            .put("/listing/{id}", listing::update)
             .get("/listing/{propertyID}", listing::getByProperty)
 
             // Purchaser (passthrough to Purchasers)
@@ -95,6 +96,13 @@ public class ApiGateway {
               "post": { "summary": "Create a listing (orchestrates Property + Analytics)", "requestBody": { "required": true, "content": { "application/json": {
                 "example": { "propertyId": 2021000, "listingDate": "2026-05-21", "price": 3800000 }
               } } }, "responses": { "201": { "description": "Listing created" } } }
+            },
+            "/listing/{id}": {
+              "put": { "summary": "Update listing price or status (fires PRICE_CHANGE / STATUS_CHANGE events)", "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "requestBody": { "required": true, "content": { "application/json": {
+                "example": { "status": "Sold" }
+              } } }, "responses": { "200": { "description": "Updated" }, "404": { "description": "Not found" } } }
             },
             "/listing/{propertyID}": {
               "get": { "summary": "Get listings by property ID", "parameters": [

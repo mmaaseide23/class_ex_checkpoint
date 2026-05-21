@@ -10,4 +10,5 @@ public class ListingDto {
     public long propertyId;
     public LocalDate listingDate;
     public long price;
+    public String status;
 }

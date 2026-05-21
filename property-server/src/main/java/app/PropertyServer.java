@@ -31,6 +31,8 @@ public class PropertyServer {
             // Listing
             .get("/listing", listingController::getAllListings)
             .post("/listing", listingController::createListing)
+            .put("/listing/{id}", ctx ->
+                listingController.updateListing(ctx, ctx.pathParam("id")))
             .get("/listing/{propertyID}", ctx ->
                 listingController.getListingsByProperty(ctx, ctx.pathParam("propertyID")))
             .get("/listing/postcode/{postcode}", ctx ->
@@ -75,6 +77,13 @@ public class PropertyServer {
                 "example": { "propertyId": 2021000, "listingDate": "2026-05-21", "price": 3800000 }
               } } }, "responses": { "201": { "description": "Listing Created" }, "400": { "description": "Failed" } } }
             },
+            "/listing/{id}": {
+              "put": { "summary": "Update listing price or status (fires PRICE_CHANGE / STATUS_CHANGE events)", "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+              ], "requestBody": { "required": true, "content": { "application/json": {
+                "example": { "status": "Sold" }
+              } } }, "responses": { "200": { "description": "Listing updated" }, "404": { "description": "Not found" } } }
+            },
             "/listing/{propertyID}": {
               "get": { "summary": "Get listings by property ID", "parameters": [
                 { "name": "propertyID", "in": "path", "required": true, "schema": { "type": "integer" } }
@@ -95,7 +104,7 @@ public class PropertyServer {
             } },
             "Listing": { "type": "object", "properties": {
               "propertyId": { "type": "integer" }, "listingDate": { "type": "string", "format": "date" },
-              "price": { "type": "integer" }
+              "price": { "type": "integer" }, "status": { "type": "string", "enum": ["Pending", "Sold"] }
             } }
           } }
         }

@@ -50,6 +50,13 @@ public class ListingGateway {
         ctx.status(res.statusCode()).result(res.body());
     }
 
+    public void update(Context ctx) {
+        String id = ctx.pathParam("id");
+        Map<String, Object> body = parseBody(ctx);
+        var res = client.putJson(urls.property + "/listing/" + id, body);
+        ctx.status(res.statusCode()).result(res.body());
+    }
+
     private void recordAccessAsync(String type, String value) {
         Map<String, String> event = new HashMap<>();
         event.put("type", type);

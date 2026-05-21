@@ -9,6 +9,7 @@ public class ListingWithPostcodeDto {
     public long propertyId;
     public LocalDate listingDate;
     public long price;
+    public String status;
     public String postCode;
     public String address;
 }

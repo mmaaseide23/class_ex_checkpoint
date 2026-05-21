@@ -97,6 +97,20 @@ public class ServiceClient {
         }
     }
 
+    public HttpResponse<String> putJson(String url, Object body) {
+        try {
+            String json = MAPPER.writeValueAsString(body);
+            return http.send(
+                HttpRequest.newBuilder(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(json))
+                    .build(),
+                HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            throw new RuntimeException("PUT " + url + " failed: " + e.getMessage(), e);
+        }
+    }
+
     public HttpResponse<String> delete(String url) {
         try {
             return http.send(
