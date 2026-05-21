@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS listings (
     property_id   BIGINT NOT NULL,
     listing_date  DATE NOT NULL,
     price         BIGINT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'Pending'
+                  CHECK (status IN ('Pending', 'Sold')),
     CONSTRAINT unique_listing UNIQUE (property_id, listing_date, price)
 );
 
